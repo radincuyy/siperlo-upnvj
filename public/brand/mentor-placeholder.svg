@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="title desc">
+  <title id="title">Placeholder foto profil mentor</title>
+  <desc id="desc">Ilustrasi profil mentor dengan latar hijau dan aksen emas.</desc>
+  <rect width="240" height="240" rx="24" fill="#f7faf4"/>
+  <circle cx="120" cy="94" r="46" fill="#155b32"/>
+  <path fill="#155b32" d="M50 208c6-42 35-68 70-68s64 26 70 68H50Z"/>
+  <circle cx="120" cy="94" r="32" fill="#d7a82f" opacity=".22"/>
+  <path fill="#d7a82f" d="m120 32 8 17 19 3-14 13 4 19-17-9-17 9 4-19-14-13 19-3 8-17Z"/>
+  <rect x="18" y="18" width="204" height="204" rx="20" fill="none" stroke="#dbe2d9" stroke-width="8"/>
+</svg>

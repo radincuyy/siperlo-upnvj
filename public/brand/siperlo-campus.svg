@@ -1,0 +1,29 @@
+<svg width="720" height="440" viewBox="0 0 720 440" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustrasi Dashboard Perlombaan</title>
+  <desc id="desc">Ilustrasi kampus, kartu lomba, piala, dan panel monitoring untuk SIPERLO.</desc>
+  <rect width="720" height="440" rx="28" fill="#F8FAF4"/>
+  <path d="M70 334H650" stroke="#DCE4D7" stroke-width="2"/>
+  <path d="M118 172L360 62L602 172" fill="#155B32"/>
+  <path d="M148 172H572V324H148V172Z" fill="#FFFFFF" stroke="#DCE4D7" stroke-width="3"/>
+  <path d="M180 202H246V324H180V202Z" fill="#EAF1E8"/>
+  <path d="M286 202H352V324H286V202Z" fill="#EAF1E8"/>
+  <path d="M392 202H458V324H392V202Z" fill="#EAF1E8"/>
+  <path d="M498 202H540V324H498V202Z" fill="#EAF1E8"/>
+  <circle cx="360" cy="149" r="34" fill="#FFF8DF" stroke="#D7A82F" stroke-width="5"/>
+  <path d="M344 151L356 163L379 135" stroke="#155B32" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="84" y="246" width="204" height="122" rx="18" fill="#102D1E"/>
+  <rect x="108" y="272" width="96" height="12" rx="6" fill="#D7A82F"/>
+  <rect x="108" y="300" width="146" height="10" rx="5" fill="#DCE4D7"/>
+  <rect x="108" y="322" width="116" height="10" rx="5" fill="#DCE4D7"/>
+  <circle cx="236" cy="308" r="24" fill="#155B32" stroke="#D7A82F" stroke-width="4"/>
+  <path d="M232 298H240V318H232V298Z" fill="#FFF8DF"/>
+  <rect x="436" y="238" width="200" height="130" rx="18" fill="#FFFFFF" stroke="#DCE4D7" stroke-width="3"/>
+  <rect x="464" y="268" width="116" height="12" rx="6" fill="#155B32"/>
+  <rect x="464" y="300" width="142" height="10" rx="5" fill="#DCE4D7"/>
+  <rect x="464" y="324" width="92" height="10" rx="5" fill="#DCE4D7"/>
+  <path d="M608 287C622 287 633 298 633 312C633 326 622 337 608 337C594 337 583 326 583 312C583 298 594 287 608 287Z" fill="#FFF8DF" stroke="#D7A82F" stroke-width="4"/>
+  <path d="M608 299V315" stroke="#155B32" stroke-width="6" stroke-linecap="round"/>
+  <path d="M600 307H616" stroke="#155B32" stroke-width="6" stroke-linecap="round"/>
+  <path d="M98 96C131 69 177 72 206 105" stroke="#D7A82F" stroke-width="8" stroke-linecap="round"/>
+  <path d="M514 76C555 57 607 70 633 108" stroke="#155B32" stroke-width="8" stroke-linecap="round"/>
+</svg>
