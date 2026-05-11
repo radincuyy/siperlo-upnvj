@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\RegistrationPrimaryStatus;
-use App\Enums\ResultStatus;
-use App\Enums\ReviewStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -19,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property int|null $mentor_id
  * @property string $status Raw DB status (registered|ongoing|finished|mentor_pending|...).
  * @property string|null $result
- * @property ResultStatus|null $result_status
+ * @property string|null $result_status
  * @property string|null $result_description
  * @property string|null $result_proof_file
  * @property \Illuminate\Support\Carbon|null $result_submitted_at
@@ -37,20 +35,12 @@ class Registration extends Model
         'finished' => 'Hasil',
     ];
 
-    /**
-     * Backward-compat shim untuk view yang masih render select/loop dari konstanta.
-     * Sumber kebenaran: App\Enums\RegistrationPrimaryStatus.
-     */
     public const PRIMARY_STATUSES = [
         'registered' => 'Terdaftar',
         'ongoing' => 'Berlangsung',
         'finished' => 'Selesai',
     ];
 
-    /**
-     * Backward-compat shim untuk view.
-     * Sumber kebenaran: App\Enums\ResultStatus.
-     */
     public const RESULT_STATUSES = [
         'pending' => 'Menunggu Validasi',
         'approved' => 'Disetujui',
@@ -137,36 +127,43 @@ class Registration extends Model
         return $this->hasOne(FundRequest::class)->latestOfMany();
     }
 
-    public function primaryStatus(): RegistrationPrimaryStatus
+    /**
+     * Lifecycle precedence:
+     * - Laporan hasil final (approved/rejected) selalu menghasilkan "finished".
+     * - Kalau belum, fallback ke kolom status mentah.
+     */
+    public function primaryStatus(): string
     {
         return match (true) {
-            $this->hasFinalResult() => RegistrationPrimaryStatus::Finished,
-            $this->status === 'ongoing' => RegistrationPrimaryStatus::Ongoing,
-            $this->status === 'finished' => RegistrationPrimaryStatus::Finished,
-            default => RegistrationPrimaryStatus::Registered,
+            $this->hasFinalResult() => 'finished',
+            $this->status === 'ongoing' => 'ongoing',
+            $this->status === 'finished' => 'finished',
+            default => 'registered',
         };
     }
 
     public function primaryStatusLabel(): string
     {
-        return $this->primaryStatus()->label();
+        return self::PRIMARY_STATUSES[$this->primaryStatus()] ?? $this->primaryStatus();
     }
 
     public function primaryStatusRank(): int
     {
-        return $this->primaryStatus()->rank();
+        return match ($this->primaryStatus()) {
+            'ongoing' => 2,
+            'finished' => 3,
+            default => 1,
+        };
     }
 
     public function resultStatusLabel(): string
     {
-        $status = ResultStatus::tryFrom((string) $this->result_status);
-
-        return $status?->label() ?? 'Belum Dilaporkan';
+        return self::RESULT_STATUSES[$this->result_status] ?? 'Belum Dilaporkan';
     }
 
     public function hasResultReport(): bool
     {
-        return $this->result_status !== null
+        return filled($this->result_status)
             || filled($this->result)
             || filled($this->result_description)
             || filled($this->result_proof_file)
@@ -175,20 +172,18 @@ class Registration extends Model
 
     public function hasFinalResult(): bool
     {
-        $status = ResultStatus::tryFrom((string) $this->result_status);
-
-        return $status?->isFinal() ?? false;
+        return in_array($this->result_status, self::FINAL_RESULT_STATUSES, true);
     }
 
     public function canReportResult(): bool
     {
-        return $this->primaryStatus() === RegistrationPrimaryStatus::Ongoing
-            && ($this->result_status === null || $this->result_status === ResultStatus::Revision->value);
+        return $this->primaryStatus() === 'ongoing'
+            && ($this->result_status === null || $this->result_status === 'revision');
     }
 
     public function canRequestOptionalSupport(): bool
     {
-        return $this->primaryStatus() !== RegistrationPrimaryStatus::Finished;
+        return $this->primaryStatus() !== 'finished';
     }
 
     public function hasActiveMentorSupport(): bool
@@ -197,7 +192,7 @@ class Registration extends Model
             return true;
         }
 
-        $activeStatuses = [ReviewStatus::Pending->value, ReviewStatus::Approved->value];
+        $activeStatuses = ['pending', 'approved'];
 
         if ($this->relationLoaded('mentorRequests')) {
             return $this->mentorRequests
@@ -217,7 +212,7 @@ class Registration extends Model
 
     public function hasActiveFundSupport(): bool
     {
-        $activeStatuses = [ReviewStatus::Pending->value, ReviewStatus::Approved->value];
+        $activeStatuses = ['pending', 'approved'];
 
         if ($this->relationLoaded('fundRequests')) {
             return $this->fundRequests
@@ -233,5 +228,55 @@ class Registration extends Model
     {
         return $this->canRequestOptionalSupport()
             && ! $this->hasActiveFundSupport();
+    }
+
+    /**
+     * Tab "Terdaftar" di review admin & dashboard: belum ongoing/finished dan
+     * laporan hasilnya belum final (approved/rejected).
+     *
+     * @param  Builder<Registration>  $query
+     * @return Builder<Registration>
+     */
+    public function scopeRegisteredTab(Builder $query): Builder
+    {
+        return $query->whereNotIn('status', ['ongoing', 'finished'])
+            ->where(fn (Builder $q) => $q->whereNull('result_status')
+                ->orWhereNotIn('result_status', self::FINAL_RESULT_STATUSES));
+    }
+
+    /**
+     * Tab "Berlangsung": status ongoing dan hasil belum dilaporkan atau perlu revisi.
+     *
+     * @param  Builder<Registration>  $query
+     * @return Builder<Registration>
+     */
+    public function scopeOngoingTab(Builder $query): Builder
+    {
+        return $query->where('status', 'ongoing')
+            ->where(fn (Builder $q) => $q->whereNull('result_status')
+                ->orWhere('result_status', 'revision'));
+    }
+
+    /**
+     * Tab "Selesai": status finished atau hasil sudah final.
+     *
+     * @param  Builder<Registration>  $query
+     * @return Builder<Registration>
+     */
+    public function scopeFinishedTab(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q->where('status', 'finished')
+            ->orWhereIn('result_status', self::FINAL_RESULT_STATUSES));
+    }
+
+    /**
+     * Tab "Validasi Hasil": laporan hasil menunggu validasi admin.
+     *
+     * @param  Builder<Registration>  $query
+     * @return Builder<Registration>
+     */
+    public function scopeResultPendingTab(Builder $query): Builder
+    {
+        return $query->where('result_status', 'pending');
     }
 }

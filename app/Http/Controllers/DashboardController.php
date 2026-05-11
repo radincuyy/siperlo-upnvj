@@ -62,11 +62,11 @@ class DashboardController extends Controller
                 'finished' => Registration::where('status', 'finished')->count(),
                 'mentors' => Mentor::where('is_active', true)->count(),
             ],
-            'registrationsByStatus' => Registration::query()
-                ->get(['status'])
-                ->groupBy(fn (Registration $registration) => $registration->primaryStatus())
-                ->map
-                ->count(),
+            'registrationsByStatus' => [
+                'registered' => Registration::registeredTab()->count(),
+                'ongoing' => Registration::ongoingTab()->count(),
+                'finished' => Registration::finishedTab()->count(),
+            ],
             'recentRegistrations' => Registration::with(['user', 'competition', 'mentor.user', 'latestFundRequest'])
                 ->latest()
                 ->take(8)

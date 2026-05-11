@@ -31,18 +31,12 @@ class ReviewController extends Controller
         }
 
         $search = $request->string('search')->toString();
-        $finalResultStatuses = Registration::FINAL_RESULT_STATUSES;
 
         $registrations = Registration::with(['user', 'competition', 'mentor.user', 'latestFundRequest'])
-            ->when($selectedStatus === 'registered', fn ($query) => $query
-                ->whereNotIn('status', ['ongoing', 'finished'])
-                ->where(fn ($query) => $query->whereNull('result_status')->orWhereNotIn('result_status', $finalResultStatuses)))
-            ->when($selectedStatus === 'ongoing', fn ($query) => $query
-                ->where('status', 'ongoing')
-                ->where(fn ($query) => $query->whereNull('result_status')->orWhere('result_status', 'revision')))
-            ->when($selectedStatus === 'finished', fn ($query) => $query
-                ->where(fn ($query) => $query->where('status', 'finished')->orWhereIn('result_status', $finalResultStatuses)))
-            ->when($selectedStatus === 'result_pending', fn ($query) => $query->where('result_status', 'pending'))
+            ->when($selectedStatus === 'registered', fn ($query) => $query->registeredTab())
+            ->when($selectedStatus === 'ongoing', fn ($query) => $query->ongoingTab())
+            ->when($selectedStatus === 'finished', fn ($query) => $query->finishedTab())
+            ->when($selectedStatus === 'result_pending', fn ($query) => $query->resultPendingTab())
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('result', 'like', "%{$search}%")
@@ -58,14 +52,10 @@ class ReviewController extends Controller
             ->withQueryString();
 
         $statusCounts = [
-            'registered' => Registration::whereNotIn('status', ['ongoing', 'finished'])
-                ->where(fn ($query) => $query->whereNull('result_status')->orWhereNotIn('result_status', $finalResultStatuses))
-                ->count(),
-            'ongoing' => Registration::where('status', 'ongoing')
-                ->where(fn ($query) => $query->whereNull('result_status')->orWhere('result_status', 'revision'))
-                ->count(),
-            'result_pending' => Registration::where('result_status', 'pending')->count(),
-            'finished' => Registration::where(fn ($query) => $query->where('status', 'finished')->orWhereIn('result_status', $finalResultStatuses))->count(),
+            'registered' => Registration::registeredTab()->count(),
+            'ongoing' => Registration::ongoingTab()->count(),
+            'result_pending' => Registration::resultPendingTab()->count(),
+            'finished' => Registration::finishedTab()->count(),
         ];
 
         return view('admin.registrations.index', [
