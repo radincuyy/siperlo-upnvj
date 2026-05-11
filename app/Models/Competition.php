@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\CompetitionStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -108,16 +107,12 @@ class Competition extends Model
      */
     public function scopeVisible(Builder $query): Builder
     {
-        return $query->whereIn('status', [
-            CompetitionStatus::Open->value,
-            CompetitionStatus::Soon->value,
-            CompetitionStatus::Closed->value,
-        ]);
+        return $query->whereIn('status', ['open', 'soon', 'closed']);
     }
 
     public function isRegistrable(): bool
     {
-        return $this->status === CompetitionStatus::Open->value
+        return $this->status === 'open'
             && $this->registration_deadline->isFuture();
     }
 }

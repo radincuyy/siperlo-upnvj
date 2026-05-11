@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -93,22 +92,18 @@ class User extends Authenticatable
         return $this->hasMany(FundRequest::class);
     }
 
-    public function isRole(UserRole|string ...$roles): bool
+    public function isRole(string ...$roles): bool
     {
-        foreach ($roles as $role) {
-            $value = $role instanceof UserRole ? $role->value : $role;
-            if ($this->role === $value) {
-                return true;
-            }
-        }
-
-        return false;
+        return in_array($this->role, $roles, true);
     }
 
     public function dashboardRoute(): string
     {
-        $role = UserRole::tryFrom((string) $this->role) ?? UserRole::Mahasiswa;
-
-        return $role->dashboardRoute();
+        return match ($this->role) {
+            'admin' => 'admin.dashboard',
+            'pimpinan' => 'pimpinan.dashboard',
+            'mentor' => 'mentor.dashboard',
+            default => 'competitions.index',
+        };
     }
 }

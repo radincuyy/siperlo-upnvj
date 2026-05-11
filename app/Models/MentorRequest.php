@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\ReviewStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -19,14 +18,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class MentorRequest extends Model
 {
-    /**
-     * Backward-compat shim untuk view yang loop konstanta.
-     * Sumber kebenaran: App\Enums\ReviewStatus.
-     */
     public const REVIEW_STATUSES = [
         'pending' => 'Menunggu Review',
         'approved' => 'Disetujui',
         'rejected' => 'Ditolak',
+    ];
+
+    public const STATUSES = [
+        'pending' => 'Menunggu Review',
+        'approved' => 'Disetujui',
+        'rejected' => 'Ditolak',
+        'revision' => 'Perlu Revisi',
     ];
     /**
      * @var list<string>
@@ -74,8 +76,6 @@ class MentorRequest extends Model
 
     public function statusLabel(): string
     {
-        $status = ReviewStatus::tryFrom((string) $this->status);
-
-        return $status?->label() ?? $this->status ?? '';
+        return self::STATUSES[$this->status] ?? $this->status ?? '';
     }
 }
