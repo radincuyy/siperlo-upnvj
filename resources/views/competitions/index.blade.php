@@ -46,11 +46,12 @@
             </div>
         </form>
 
-        <div class="mt-4 text-sm text-muted-ink">
-            {{ $totalResults }} lomba ditampilkan{{ $hasFilter ? ' dari filter yang dipilih' : '' }}.
+        <div class="mt-4 flex items-center gap-2 text-sm text-muted-ink">
+            <x-lucide-list-filter class="h-4 w-4" aria-hidden="true" />
+            <span>{{ $totalResults }} lomba ditampilkan{{ $hasFilter ? ' dari filter yang dipilih' : '' }}.</span>
         </div>
 
-        <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        <div class="mt-5 grid gap-5 lg:grid-cols-2">
             @forelse ($competitions as $competition)
                 @php
                     $registered = in_array($competition->id, $registeredCompetitionIds, true);
@@ -66,32 +67,57 @@
                     $statusLabel = $competition->status === 'open'
                         ? 'Pendaftaran Buka'
                         : ($competition->status === 'soon' ? 'Akan Datang' : 'Ditutup');
+                    $feeLabel = $competition->fee > 0 ? 'Rp '.number_format($competition->fee, 0, ',', '.') : 'Gratis';
                 @endphp
                 <article class="siperlo-surface rounded-md p-5">
                     <div class="flex items-start justify-between gap-4">
                         <div class="flex min-w-0 items-start gap-4">
-                            <div class="flex h-28 w-20 shrink-0 overflow-hidden rounded-md border border-border-line bg-admin-note-surface">
+                            <div class="flex h-36 w-24 shrink-0 overflow-hidden rounded-md border border-border-line bg-admin-note-surface">
                                 <img src="{{ $posterUrl }}"
                                      alt="{{ $competition->poster_image ? 'Poster lomba '.$competition->title : '' }}"
                                      @if (! $competition->poster_image) aria-hidden="true" @endif
                                      loading="lazy"
                                      decoding="async"
-                                     class="{{ $competition->poster_image ? 'h-full w-full object-cover' : 'm-auto h-10 w-10 object-contain' }}">
+                                     class="{{ $competition->poster_image ? 'h-full w-full object-cover' : 'm-auto h-12 w-12 object-contain' }}">
                             </div>
                             <div class="min-w-0">
-                                <div class="text-sm font-semibold text-muted-ink">{{ $competition->category }} - {{ $competition->type ?: 'Umum' }}</div>
-                                <h3 class="mt-1 font-display text-xl font-bold leading-snug">{{ $competition->title }}</h3>
+                                <div class="text-xs font-semibold uppercase tracking-[0.14em] text-muted-ink">{{ $competition->category }} · {{ $competition->type ?: 'Umum' }}</div>
+                                <h3 class="mt-2 font-display text-2xl font-bold leading-tight">{{ $competition->title }}</h3>
                             </div>
                         </div>
                         <span class="{{ $statusClass }} shrink-0">{{ $statusLabel }}</span>
                     </div>
 
-                    <div class="mt-5 grid gap-2 text-sm text-ink/80 sm:grid-cols-2">
-                        <div>Deadline: {{ $competition->registration_deadline->translatedFormat('d M Y') }}</div>
-                        <div>{{ $competition->registrations_count }} pendaftar</div>
-                        <div>Penyelenggara: {{ $competition->organizer }}</div>
-                        <div>Biaya: {{ $competition->fee > 0 ? 'Rp '.number_format($competition->fee, 0, ',', '.') : 'Gratis' }}</div>
-                    </div>
+                    <dl class="mt-5 grid gap-3 text-sm text-ink/80 sm:grid-cols-2">
+                        <div class="flex items-start gap-2">
+                            <x-lucide-calendar class="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" aria-hidden="true" />
+                            <div>
+                                <dt class="text-xs uppercase tracking-wide text-muted-ink">Deadline</dt>
+                                <dd class="font-semibold text-ink">{{ $competition->registration_deadline->translatedFormat('d M Y') }}</dd>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <x-lucide-users class="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" aria-hidden="true" />
+                            <div>
+                                <dt class="text-xs uppercase tracking-wide text-muted-ink">Pendaftar</dt>
+                                <dd class="font-semibold text-ink">{{ $competition->registrations_count }} orang</dd>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <x-lucide-building-2 class="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" aria-hidden="true" />
+                            <div>
+                                <dt class="text-xs uppercase tracking-wide text-muted-ink">Penyelenggara</dt>
+                                <dd class="font-semibold text-ink">{{ $competition->organizer }}</dd>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <x-lucide-wallet class="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" aria-hidden="true" />
+                            <div>
+                                <dt class="text-xs uppercase tracking-wide text-muted-ink">Biaya</dt>
+                                <dd class="font-semibold text-ink">{{ $feeLabel }}</dd>
+                            </div>
+                        </div>
+                    </dl>
 
                     <div class="mt-5 flex flex-wrap items-center gap-3 border-t border-border-line pt-4">
                         <a href="{{ route('competitions.show', $competition) }}" class="siperlo-btn-secondary px-4 py-2 text-sm">
@@ -122,7 +148,11 @@
 
     <aside class="space-y-5">
         <div class="siperlo-surface rounded-md p-5">
-            <h2 class="font-display text-lg font-bold">Mendekati Deadline</h2>
+            <div class="flex items-center gap-2">
+                <x-lucide-alarm-clock class="h-4 w-4 text-amber-700" aria-hidden="true" />
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Prioritas</span>
+            </div>
+            <h2 class="mt-2 font-display text-xl font-bold">Mendekati Deadline</h2>
             <div class="mt-4 space-y-3">
                 @forelse ($upcomingDeadlines as $competition)
                     @php
@@ -139,8 +169,12 @@
         </div>
 
         <div class="siperlo-surface rounded-md p-5">
-            <h2 class="font-display text-lg font-bold">Alur Pendaftaran</h2>
-            <p class="mt-2 text-sm text-ink/80">Lengkapi profil → pilih lomba → ikuti lomba → laporkan hasil.</p>
+            <div class="flex items-center gap-2">
+                <x-lucide-map class="h-4 w-4 text-campus-green" aria-hidden="true" />
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-campus-green">Panduan</span>
+            </div>
+            <h2 class="mt-2 font-display text-xl font-bold">Alur Pendaftaran</h2>
+            <p class="mt-2 text-sm text-ink/80">Lengkapi profil, pilih lomba, ikuti kompetisi, lalu laporkan hasil.</p>
             <a href="{{ route('sop.index') }}" class="siperlo-btn-secondary mt-4 block px-4 py-2 text-center text-sm">Baca SOP Lengkap</a>
         </div>
     </aside>

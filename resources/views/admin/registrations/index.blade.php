@@ -139,7 +139,7 @@
                             <select id="registration-status-{{ $registration->id }}" name="status" class="siperlo-field mt-1 w-full">
                                 @foreach (\App\Models\Registration::PRIMARY_STATUSES as $status => $label)
                                     @continue($status === 'finished' && ! $hasResultReport)
-                                    <option value="{{ $status }}" @selected($registration->primaryStatus()->value === $status)>{{ $label }}</option>
+                                    <option value="{{ $status }}" @selected($registration->primaryStatus() === $status)>{{ $label }}</option>
                                 @endforeach
                             </select>
                         @endif
@@ -155,7 +155,7 @@
                             <label for="registration-result-status-{{ $registration->id }}" class="text-sm font-semibold text-ink">Status laporan hasil</label>
                             <select id="registration-result-status-{{ $registration->id }}" name="result_status" class="siperlo-field mt-1 w-full">
                                 @foreach (\App\Models\Registration::RESULT_STATUSES as $status => $label)
-                                    <option value="{{ $status }}" @selected($registration->result_status?->value === $status)>{{ $label }}</option>
+                                    <option value="{{ $status }}" @selected($registration->result_status === $status)>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>

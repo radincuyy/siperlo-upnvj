@@ -82,11 +82,7 @@
     }
 
     body {
-        background:
-            linear-gradient(90deg, rgba(21, 91, 50, .035) 1px, transparent 1px),
-            linear-gradient(0deg, rgba(21, 91, 50, .035) 1px, transparent 1px),
-            var(--siperlo-paper);
-        background-size: 28px 28px;
+        background: var(--siperlo-paper);
         color: var(--siperlo-ink);
     }
 

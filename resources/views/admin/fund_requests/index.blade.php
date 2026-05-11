@@ -50,8 +50,8 @@
 <div class="mt-5 grid gap-4">
     @forelse ($requests as $request)
         @php
-            $badgeClass = $statusStyles[$request->status->value] ?? 'siperlo-status siperlo-status-neutral';
-            $isPending = $request->status->value === 'pending';
+            $badgeClass = $statusStyles[$request->status] ?? 'siperlo-status siperlo-status-neutral';
+            $isPending = $request->status === 'pending';
         @endphp
         <article class="siperlo-surface rounded-md p-5">
             <div class="grid gap-5 xl:grid-cols-[1fr_360px]">
@@ -114,7 +114,7 @@
                             <label for="fund-status-{{ $request->id }}" class="text-sm font-semibold text-ink">Status review</label>
                             <select id="fund-status-{{ $request->id }}" name="status" class="siperlo-field mt-1 w-full">
                                 @foreach (\App\Models\FundRequest::REVIEW_STATUSES as $status => $label)
-                                    <option value="{{ $status }}" @selected($request->status->value === $status)>{{ $label }}</option>
+                                    <option value="{{ $status }}" @selected($request->status === $status)>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>

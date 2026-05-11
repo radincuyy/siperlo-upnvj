@@ -10,28 +10,22 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans text-ink antialiased">
-    <div class="min-h-screen lg:grid lg:grid-cols-[1fr_560px]">
-        <section class="relative hidden overflow-hidden text-white lg:flex lg:flex-col lg:justify-between">
-            <img src="{{ asset('brand/upnvj.webp') }}"
-                 alt="Gedung Universitas Pembangunan Nasional Veteran Jakarta"
-                 class="absolute inset-0 h-full w-full object-cover">
-            <div class="absolute inset-0 bg-campus-green-deep/80"></div>
-            <div class="absolute inset-0 bg-gradient-to-t from-campus-green-deep via-campus-green/70 to-campus-green/35"></div>
-
-            <div class="relative z-10 p-10" aria-hidden="true"></div>
-            <div class="relative z-10 max-w-xl p-12">
-                <div class="text-sm font-semibold uppercase text-emerald-100">SIPERLO UPNVJ</div>
-                <h1 class="mt-4 font-display text-4xl font-bold">Sistem Informasi Perlombaan UPN Veteran Jakarta</h1>
-                <p class="mt-5 max-w-lg leading-7 text-emerald-50">Pusat lomba, mentor, dana, dan monitoring prestasi mahasiswa.</p>
+    <div class="flex min-h-screen items-center justify-center bg-paper px-4 py-10 sm:px-6">
+        <div class="grid w-full max-w-5xl overflow-hidden rounded-2xl bg-panel shadow-2xl shadow-black/10 ring-1 ring-border-line lg:grid-cols-2">
+            <div class="flex items-center p-8 sm:p-10 lg:p-12">
+                <div class="w-full">
+                    {{ $slot }}
+                </div>
             </div>
-        </section>
 
-        <main class="flex min-h-screen items-center justify-center bg-paper px-5 py-10">
-            <div class="w-full max-w-md">
-                {{ $slot }}
-                <p class="mt-8 text-center text-sm text-muted-ink">Akses disesuaikan otomatis berdasarkan jenis akun.</p>
+            <div class="relative hidden min-h-[560px] overflow-hidden lg:block">
+                <img src="{{ asset('brand/upnvj.webp') }}"
+                     alt=""
+                     aria-hidden="true"
+                     class="absolute inset-0 h-full w-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-br from-campus-green-deep/40 via-campus-green-deep/15 to-transparent"></div>
             </div>
-        </main>
+        </div>
     </div>
 </body>
 </html>
