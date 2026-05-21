@@ -115,4 +115,43 @@ class Competition extends Model
         return $this->status === 'open'
             && $this->registration_deadline->isFuture();
     }
+
+    public function displayStatus(): string
+    {
+        if ($this->status === 'open' && $this->registration_deadline->isPast()) {
+            return 'closed';
+        }
+
+        return $this->status;
+    }
+
+    public function requirementsList(): \Illuminate\Support\Collection
+    {
+        return $this->splitLines($this->requirements);
+    }
+
+    public function benefitsList(): \Illuminate\Support\Collection
+    {
+        return $this->splitLines($this->benefits);
+    }
+
+    public function timelineList(): \Illuminate\Support\Collection
+    {
+        return $this->splitLines($this->timeline);
+    }
+
+    public function hasContactInfo(): bool
+    {
+        return filled($this->contact_person_name)
+            || filled($this->contact_person_phone)
+            || filled($this->contact_person_email);
+    }
+
+    private function splitLines(?string $value): \Illuminate\Support\Collection
+    {
+        return collect(preg_split('/\r\n|\r|\n/', (string) $value))
+            ->map(fn ($line) => trim($line))
+            ->filter()
+            ->values();
+    }
 }

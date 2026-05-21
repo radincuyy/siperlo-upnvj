@@ -18,9 +18,9 @@
     $guidebookUrl = $competition->guidebook_file
         ? \Illuminate\Support\Facades\Storage::url($competition->guidebook_file)
         : null;
-    $requirements = collect(preg_split('/\r\n|\r|\n/', (string) $competition->requirements))->map(fn ($line) => trim($line))->filter();
-    $benefits = collect(preg_split('/\r\n|\r|\n/', (string) $competition->benefits))->map(fn ($line) => trim($line))->filter();
-    $timeline = collect(preg_split('/\r\n|\r|\n/', (string) $competition->timeline))->map(fn ($line) => trim($line))->filter();
+    $requirements = $competition->requirementsList();
+    $benefits = $competition->benefitsList();
+    $timeline = $competition->timelineList();
     $supportStatusLabels = [
         'pending' => 'Menunggu review',
         'approved' => 'Disetujui',
@@ -31,14 +31,29 @@
     $mentorStatus = $registration?->mentor
         ? $registration->mentor->user->name
         : ($latestMentorRequest ? ($supportStatusLabels[$latestMentorRequest->status] ?? $latestMentorRequest->status) : 'Belum diajukan');
-    $competitionStatusClass = match ($competition->status) {
+    $competitionDisplayStatus = $competition->displayStatus();
+    $competitionStatusClass = match ($competitionDisplayStatus) {
         'open' => 'siperlo-status siperlo-status-success',
         'soon' => 'siperlo-status siperlo-status-neutral',
         'closed' => 'siperlo-status siperlo-status-warning',
         default => 'siperlo-status siperlo-status-neutral',
     };
-    $statusLabel = $competition->status === 'open' ? 'Pendaftaran Buka' : ($competition->status === 'soon' ? 'Akan Datang' : 'Ditutup');
+    $statusLabel = match ($competitionDisplayStatus) {
+        'open' => 'Pendaftaran Buka',
+        'soon' => 'Akan Datang',
+        default => 'Ditutup',
+    };
     $feeLabel = $competition->fee > 0 ? 'Rp '.number_format($competition->fee, 0, ',', '.') : 'Gratis';
+    $eventStart = optional($competition->event_start)->translatedFormat('d M Y');
+    $eventEnd = optional($competition->event_end)->translatedFormat('d M Y');
+    $eventLabel = match (true) {
+        filled($eventStart) && filled($eventEnd) && $eventStart !== $eventEnd => "$eventStart sampai $eventEnd",
+        filled($eventStart) => $eventStart,
+        default => 'Menunggu jadwal resmi',
+    };
+    $isFinishedRegistration = $registration && $registration->primaryStatus() === 'finished';
+    $isClosed = $competitionDisplayStatus === 'closed';
+    $documentsRedam = $isFinishedRegistration || $isClosed;
 @endphp
 
 <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -48,6 +63,9 @@
                 <div class="bg-soft-green p-4">
                     <img src="{{ $posterUrl }}"
                          alt="Poster atau ilustrasi lomba {{ $competition->title }}"
+                         width="320"
+                         height="400"
+                         loading="lazy"
                          decoding="async"
                          class="aspect-[4/5] w-full rounded-md border border-border-line object-cover">
                 </div>
@@ -77,14 +95,14 @@
                             <x-lucide-calendar-range class="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" aria-hidden="true" />
                             <div>
                                 <dt class="text-xs uppercase tracking-wide text-muted-ink">Pelaksanaan</dt>
-                                <dd class="font-semibold text-ink">{{ optional($competition->event_start)->translatedFormat('d M Y') ?: '-' }} — {{ optional($competition->event_end)->translatedFormat('d M Y') ?: '-' }}</dd>
+                                <dd class="font-semibold text-ink">{{ $eventLabel }}</dd>
                             </div>
                         </div>
                         <div class="flex items-start gap-2">
                             <x-lucide-map-pin class="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" aria-hidden="true" />
                             <div>
                                 <dt class="text-xs uppercase tracking-wide text-muted-ink">Lokasi</dt>
-                                <dd class="font-semibold text-ink">{{ $competition->location ?: '-' }}</dd>
+                                <dd class="font-semibold text-ink">{{ $competition->location ?: 'Belum ditentukan' }}</dd>
                             </div>
                         </div>
                         <div class="flex items-start gap-2">
@@ -117,7 +135,7 @@
             <div class="siperlo-surface rounded-md p-6">
                 <div class="flex items-center gap-2">
                     <x-lucide-list-checks class="h-4 w-4 text-campus-green" aria-hidden="true" />
-                    <h2 class="font-display text-xl font-bold">Syarat Peserta</h2>
+                    <h3 class="font-display text-xl font-bold">Syarat Peserta</h3>
                 </div>
                 <div class="mt-4 space-y-3 text-sm text-ink/80">
                     @forelse ($requirements as $item)
@@ -134,7 +152,7 @@
             <div class="siperlo-surface rounded-md p-6">
                 <div class="flex items-center gap-2">
                     <x-lucide-gift class="h-4 w-4 text-campus-gold" aria-hidden="true" />
-                    <h2 class="font-display text-xl font-bold">Benefit & Hadiah</h2>
+                    <h3 class="font-display text-xl font-bold">Benefit & Hadiah</h3>
                 </div>
                 <div class="mt-4 space-y-3 text-sm text-ink/80">
                     @forelse ($benefits as $item)
@@ -152,18 +170,18 @@
         <div class="siperlo-surface rounded-md p-6">
             <div class="flex items-center gap-2">
                 <x-lucide-clock class="h-4 w-4 text-campus-green" aria-hidden="true" />
-                <h2 class="font-display text-xl font-bold">Timeline Lomba</h2>
+                <h3 class="font-display text-xl font-bold">Timeline Lomba</h3>
             </div>
             <div class="mt-5 space-y-3">
                 @forelse ($timeline as $item)
-                    <div class="flex gap-4 rounded-md border border-border-line bg-admin-note-surface p-3 text-sm">
+                    <div class="flex gap-4 text-sm">
                         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-campus-green text-xs font-bold text-white" aria-hidden="true">{{ $loop->iteration }}</span>
                         <span class="pt-1 text-ink/80">{{ $item }}</span>
                     </div>
                 @empty
-                    <div class="rounded-md border border-border-line bg-admin-note-surface p-3 text-sm text-ink/80">
-                        Jadwal utama: pendaftaran ditutup {{ $competition->registration_deadline->translatedFormat('d F Y') }} dan pelaksanaan mulai {{ optional($competition->event_start)->translatedFormat('d F Y') ?: 'menunggu informasi resmi' }}.
-                    </div>
+                    <p class="text-sm text-ink/80">
+                        Jadwal utama: pendaftaran ditutup {{ $competition->registration_deadline->translatedFormat('d F Y') }}, pelaksanaan mulai {{ optional($competition->event_start)->translatedFormat('d F Y') ?: 'menunggu informasi resmi' }}.
+                    </p>
                 @endforelse
             </div>
         </div>
@@ -173,80 +191,116 @@
         <div class="siperlo-surface rounded-md p-5">
             <div class="flex items-center gap-2">
                 <x-lucide-clipboard-check class="h-4 w-4 text-campus-green" aria-hidden="true" />
-                <h2 class="font-display text-lg font-bold">Status Pendaftaran</h2>
+                <h3 class="font-display text-lg font-bold">Status Pendaftaran</h3>
             </div>
             @if ($registration)
-                <div class="mt-3 rounded-md bg-admin-note-surface p-3 text-sm">
-                    <div class="font-semibold">{{ $registration->primaryStatusLabel() }}</div>
-                    <div class="mt-1 text-ink/80">Mentor opsional: {{ $mentorStatus }}</div>
-                    <div class="text-ink/80">Dana opsional: {{ $registration->latestFundRequest ? ($supportStatusLabels[$registration->latestFundRequest->status] ?? $registration->latestFundRequest->status) : 'Belum diajukan' }}</div>
-                    <div class="text-ink/80">Laporan hasil: {{ $registration->resultStatusLabel() }}</div>
+                <dl class="mt-3 divide-y divide-border-line text-sm">
+                    <div class="flex items-baseline justify-between gap-3 py-2">
+                        <dt class="text-muted-ink">Status utama</dt>
+                        <dd class="font-semibold text-ink">{{ $registration->primaryStatusLabel() }}</dd>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3 py-2">
+                        <dt class="text-muted-ink">Mentor opsional</dt>
+                        <dd class="text-ink">{{ $mentorStatus }}</dd>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3 py-2">
+                        <dt class="text-muted-ink">Dana opsional</dt>
+                        <dd class="text-ink">{{ $registration->latestFundRequest ? ($supportStatusLabels[$registration->latestFundRequest->status] ?? $registration->latestFundRequest->status) : 'Belum diajukan' }}</dd>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3 py-2">
+                        <dt class="text-muted-ink">Laporan hasil</dt>
+                        <dd class="text-ink">{{ $registration->resultStatusLabel() }}</dd>
+                    </div>
                     @if ($registration->result)
-                        <div class="mt-2 font-semibold text-ink">{{ $registration->result }}</div>
+                        <div class="flex items-baseline justify-between gap-3 py-2">
+                            <dt class="text-muted-ink">Capaian</dt>
+                            <dd class="font-semibold text-ink">{{ $registration->result }}</dd>
+                        </div>
                     @endif
-                </div>
+                </dl>
                 <a href="{{ route('registrations.index') }}" class="siperlo-btn-primary mt-4 block px-4 py-2 text-center text-sm">Lihat Progress</a>
-            @elseif (auth()->user()->isRole('mahasiswa') && $competition->status === 'open' && ! $competition->registration_deadline->isPast())
+            @elseif ($competition->isRegistrable() && auth()->user()->isRole('mahasiswa'))
                 <form method="POST" action="{{ route('competitions.register', $competition) }}" class="mt-3">
                     @csrf
                     <x-submit-button label="Daftar Sekarang" pending-label="Mendaftarkan..." class="w-full" />
                 </form>
             @else
-                <p class="mt-3 text-sm text-ink/80">Pendaftaran tidak tersedia untuk akun atau status lomba saat ini.</p>
+                <p class="mt-3 text-sm text-ink/80">
+                    @if (! auth()->user()->isRole('mahasiswa'))
+                        Pendaftaran lomba hanya tersedia untuk akun mahasiswa.
+                    @elseif ($isClosed)
+                        Pendaftaran sudah ditutup.
+                    @else
+                        Pendaftaran belum dibuka.
+                    @endif
+                </p>
             @endif
         </div>
 
-        <div class="siperlo-surface rounded-md p-5">
-            <div class="flex items-center gap-2">
-                <x-lucide-link class="h-4 w-4 text-campus-green" aria-hidden="true" />
-                <h2 class="font-display text-lg font-bold">Dokumen & Link Resmi</h2>
-            </div>
-            <div class="mt-4 space-y-3">
-                @if ($guidebookUrl)
-                    <a href="{{ $guidebookUrl }}" target="_blank" rel="noopener" class="siperlo-btn-primary flex items-center justify-center gap-2 px-4 py-2 text-sm">
-                        <x-lucide-file-text class="h-4 w-4" aria-hidden="true" />
-                        Lihat Guidebook
-                    </a>
-                @else
-                    <div class="rounded-md bg-admin-note-surface p-3 text-sm text-ink/80">Guidebook belum diunggah.</div>
-                @endif
+        @if ($guidebookUrl || $competition->external_registration_url || $competition->official_website || $competition->social_media)
+            <div class="siperlo-surface rounded-md p-5">
+                <div class="flex items-center gap-2">
+                    <x-lucide-link class="h-4 w-4 text-campus-green" aria-hidden="true" />
+                    <h3 class="font-display text-lg font-bold">Dokumen & Link Resmi</h3>
+                </div>
+                <div class="mt-4 space-y-3">
+                    @if ($guidebookUrl)
+                        <a href="{{ $guidebookUrl }}" target="_blank" rel="noopener" class="{{ $documentsRedam ? 'siperlo-btn-secondary' : 'siperlo-btn-primary' }} flex items-center justify-center gap-2 px-4 py-2 text-sm">
+                            <x-lucide-file-text class="h-4 w-4" aria-hidden="true" />
+                            Lihat Guidebook
+                        </a>
+                    @endif
 
-                @if ($competition->external_registration_url)
-                    <a href="{{ $competition->external_registration_url }}" target="_blank" rel="noopener" class="siperlo-btn-secondary flex items-center justify-center gap-2 px-4 py-2 text-sm">
-                        <x-lucide-external-link class="h-4 w-4" aria-hidden="true" />
-                        Pendaftaran Eksternal
-                    </a>
-                @endif
-                @if ($competition->official_website)
-                    <a href="{{ $competition->official_website }}" target="_blank" rel="noopener" class="siperlo-btn-secondary flex items-center justify-center gap-2 px-4 py-2 text-sm">
-                        <x-lucide-globe class="h-4 w-4" aria-hidden="true" />
-                        Website Resmi
-                    </a>
-                @endif
-                @if ($competition->social_media)
-                    <a href="{{ $competition->social_media }}" target="_blank" rel="noopener" class="siperlo-btn-secondary flex items-center justify-center gap-2 px-4 py-2 text-sm">
-                        <x-lucide-share-2 class="h-4 w-4" aria-hidden="true" />
-                        Sosial Media
-                    </a>
-                @endif
+                    @if ($competition->external_registration_url)
+                        <a href="{{ $competition->external_registration_url }}" target="_blank" rel="noopener" class="siperlo-btn-secondary flex items-center justify-center gap-2 px-4 py-2 text-sm">
+                            <x-lucide-external-link class="h-4 w-4" aria-hidden="true" />
+                            Pendaftaran Eksternal
+                        </a>
+                    @endif
+                    @if ($competition->official_website)
+                        <a href="{{ $competition->official_website }}" target="_blank" rel="noopener" class="siperlo-btn-secondary flex items-center justify-center gap-2 px-4 py-2 text-sm">
+                            <x-lucide-globe class="h-4 w-4" aria-hidden="true" />
+                            Website Resmi
+                        </a>
+                    @endif
+                    @if ($competition->social_media)
+                        <a href="{{ $competition->social_media }}" target="_blank" rel="noopener" class="siperlo-btn-secondary flex items-center justify-center gap-2 px-4 py-2 text-sm">
+                            <x-lucide-share-2 class="h-4 w-4" aria-hidden="true" />
+                            Sosial Media
+                        </a>
+                    @endif
+                </div>
             </div>
-        </div>
+        @endif
 
-        <div class="siperlo-surface rounded-md p-5">
-            <div class="flex items-center gap-2">
-                <x-lucide-phone class="h-4 w-4 text-campus-green" aria-hidden="true" />
-                <h2 class="font-display text-lg font-bold">Contact Person</h2>
+        @if ($competition->hasContactInfo())
+            <div class="siperlo-surface rounded-md p-5">
+                <div class="flex items-center gap-2">
+                    <x-lucide-phone class="h-4 w-4 text-campus-green" aria-hidden="true" />
+                    <h3 class="font-display text-lg font-bold">Contact Person</h3>
+                </div>
+                <dl class="mt-3 space-y-2 text-sm">
+                    @if ($competition->contact_person_name)
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-muted-ink">Nama</dt>
+                            <dd class="font-semibold text-ink">{{ $competition->contact_person_name }}</dd>
+                        </div>
+                    @endif
+                    @if ($competition->contact_person_phone)
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-muted-ink">WhatsApp</dt>
+                            <dd class="text-ink">{{ $competition->contact_person_phone }}</dd>
+                        </div>
+                    @endif
+                    @if ($competition->contact_person_email)
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-muted-ink">Email</dt>
+                            <dd class="text-ink">{{ $competition->contact_person_email }}</dd>
+                        </div>
+                    @endif
+                </dl>
             </div>
-            <div class="mt-4 rounded-md bg-admin-note-surface p-3 text-sm">
-                <div class="font-semibold text-ink">{{ $competition->contact_person_name ?: 'Belum tersedia' }}</div>
-                @if ($competition->contact_person_phone)
-                    <div class="mt-1 text-ink/80">WA: {{ $competition->contact_person_phone }}</div>
-                @endif
-                @if ($competition->contact_person_email)
-                    <div class="text-ink/80">Email: {{ $competition->contact_person_email }}</div>
-                @endif
-            </div>
-        </div>
+        @endif
     </aside>
 </div>
 @endsection

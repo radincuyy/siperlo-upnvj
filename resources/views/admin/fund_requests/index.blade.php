@@ -133,6 +133,7 @@
                             {{ $request->statusLabel() }}
                             <span class="ml-2 text-xs font-normal text-muted-ink">(final)</span>
                         </div>
+                        <p class="mt-2 text-sm text-ink/80">Keputusan review sudah final.</p>
                         @if ($request->admin_notes)
                             <div class="mt-3 text-sm">
                                 <div class="font-semibold text-ink">Catatan admin</div>

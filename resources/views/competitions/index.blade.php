@@ -58,15 +58,18 @@
                     $posterUrl = $competition->poster_image
                         ? \Illuminate\Support\Facades\Storage::url($competition->poster_image)
                         : asset('brand/siperlo-mark.png');
-                    $statusClass = match ($competition->status) {
+                    $displayStatus = $competition->displayStatus();
+                    $statusClass = match ($displayStatus) {
                         'open' => 'siperlo-status siperlo-status-success',
                         'soon' => 'siperlo-status siperlo-status-neutral',
                         'closed' => 'siperlo-status siperlo-status-warning',
                         default => 'siperlo-status siperlo-status-neutral',
                     };
-                    $statusLabel = $competition->status === 'open'
-                        ? 'Pendaftaran Buka'
-                        : ($competition->status === 'soon' ? 'Akan Datang' : 'Ditutup');
+                    $statusLabel = match ($displayStatus) {
+                        'open' => 'Pendaftaran Buka',
+                        'soon' => 'Akan Datang',
+                        default => 'Ditutup',
+                    };
                     $feeLabel = $competition->fee > 0 ? 'Rp '.number_format($competition->fee, 0, ',', '.') : 'Gratis';
                 @endphp
                 <article class="siperlo-surface rounded-md p-5">

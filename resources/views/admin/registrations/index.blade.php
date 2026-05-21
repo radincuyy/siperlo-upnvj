@@ -146,6 +146,10 @@
                     </div>
 
                     @if ($hasResultReport && $isResultReviewTab)
+                        <div class="mt-3 rounded-md border border-border-line bg-panel p-3 text-sm text-ink/80">
+                            Status utama akan otomatis mengikuti keputusan validasi laporan hasil.
+                        </div>
+
                         <div class="mt-3">
                             <label for="registration-result-{{ $registration->id }}" class="text-sm font-semibold text-ink">Hasil lomba</label>
                             <input id="registration-result-{{ $registration->id }}" name="result" value="{{ $registration->result }}" placeholder="Contoh: Finalis Nasional" class="siperlo-field mt-1 w-full">
@@ -166,8 +170,14 @@
                         </div>
                     @else
                         <div class="mt-3 rounded-md border border-border-line bg-panel p-3 text-sm text-ink/80">
-                            @if ($registration->result_status === 'pending')
+                            @if ($isRevisionResult)
+                                Laporan perlu revisi. Mahasiswa harus memperbarui laporan hasil sebelum proses bisa difinalkan.
+                            @elseif ($isOngoingResultFlow && ! $hasResultReport)
+                                Menunggu mahasiswa mengirim laporan hasil. Status utama dikunci setelah lomba berjalan.
+                            @elseif ($registration->result_status === 'pending')
                                 Review laporan lewat tab <span class="font-semibold">Validasi Hasil</span>.
+                            @elseif (! $hasResultReport)
+                                Belum ada laporan hasil yang bisa direview.
                             @else
                                 Kamu masih bisa memperbarui catatan monitoring di bawah.
                             @endif

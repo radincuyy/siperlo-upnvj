@@ -171,4 +171,151 @@
         </div>
     </aside>
 </div>
+
+<section class="mt-6 grid gap-6 xl:grid-cols-3">
+    <div class="siperlo-surface rounded-md p-5 xl:col-span-2">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="font-display text-lg font-bold">Tren Pendaftaran 6 Bulan</h2>
+                <p class="mt-1 text-sm text-ink/80">Jumlah pendaftaran lomba per bulan, termasuk bulan berjalan.</p>
+            </div>
+            <span class="siperlo-status siperlo-status-neutral">{{ array_sum($chartTrend['values']) }} total</span>
+        </div>
+        <div class="mt-4 h-64">
+            <canvas id="siperlo-chart-trend" aria-label="Grafik tren pendaftaran 6 bulan terakhir" role="img"></canvas>
+        </div>
+    </div>
+
+    <div class="siperlo-surface rounded-md p-5">
+        <h2 class="font-display text-lg font-bold">Pendaftaran per Kategori</h2>
+        <p class="mt-1 text-sm text-ink/80">Kategori lomba yang paling banyak diikuti.</p>
+        <div class="mt-4 h-64">
+            @if (empty($chartByCategory['labels']))
+                <div class="flex h-full items-center justify-center text-sm text-muted-ink">Belum ada data pendaftaran.</div>
+            @else
+                <canvas id="siperlo-chart-category" aria-label="Grafik pendaftaran per kategori lomba" role="img"></canvas>
+            @endif
+        </div>
+    </div>
+
+    <div class="siperlo-surface rounded-md p-5 xl:col-span-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="font-display text-lg font-bold">Sebaran Hasil Lomba</h2>
+                <p class="mt-1 text-sm text-ink/80">Distribusi laporan hasil berdasarkan keputusan validasi admin.</p>
+            </div>
+            <span class="siperlo-status siperlo-status-neutral">{{ array_sum($chartResults['values']) }} pendaftaran</span>
+        </div>
+        <div class="mt-4 h-56">
+            <canvas id="siperlo-chart-results" aria-label="Grafik sebaran hasil lomba" role="img"></canvas>
+        </div>
+    </div>
+</section>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+<script defer>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof Chart === 'undefined') return;
+
+        const campusGreen = '#155b32';
+        const campusGreenSoft = 'rgba(21, 91, 50, 0.18)';
+        const campusGold = '#d7a82f';
+        const ink = '#17201b';
+        const mutedInk = '#5f6b60';
+        const borderLine = '#dbe2d9';
+
+        Chart.defaults.font.family = "'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif";
+        Chart.defaults.color = mutedInk;
+        Chart.defaults.borderColor = borderLine;
+
+        const baseScales = {
+            x: { grid: { display: false }, ticks: { color: mutedInk } },
+            y: {
+                beginAtZero: true,
+                grid: { color: borderLine, drawBorder: false },
+                ticks: { color: mutedInk, precision: 0 },
+            },
+        };
+
+        const trendEl = document.getElementById('siperlo-chart-trend');
+        if (trendEl) {
+            new Chart(trendEl, {
+                type: 'line',
+                data: {
+                    labels: @json($chartTrend['labels']),
+                    datasets: [{
+                        label: 'Pendaftaran',
+                        data: @json($chartTrend['values']),
+                        borderColor: campusGreen,
+                        backgroundColor: campusGreenSoft,
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointBackgroundColor: campusGreen,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: baseScales,
+                },
+            });
+        }
+
+        const categoryEl = document.getElementById('siperlo-chart-category');
+        if (categoryEl) {
+            new Chart(categoryEl, {
+                type: 'bar',
+                data: {
+                    labels: @json($chartByCategory['labels']),
+                    datasets: [{
+                        label: 'Pendaftaran',
+                        data: @json($chartByCategory['values']),
+                        backgroundColor: campusGreen,
+                        borderRadius: 4,
+                        maxBarThickness: 28,
+                    }],
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: borderLine }, ticks: { color: mutedInk, precision: 0 } },
+                        y: { grid: { display: false }, ticks: { color: ink } },
+                    },
+                },
+            });
+        }
+
+        const resultsEl = document.getElementById('siperlo-chart-results');
+        if (resultsEl) {
+            new Chart(resultsEl, {
+                type: 'bar',
+                data: {
+                    labels: @json($chartResults['labels']),
+                    datasets: [{
+                        label: 'Pendaftaran',
+                        data: @json($chartResults['values']),
+                        backgroundColor: [campusGreen, '#22c55e', campusGold, '#dc2626', '#94a3b8'],
+                        borderRadius: 4,
+                        maxBarThickness: 56,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: baseScales,
+                },
+            });
+        }
+    });
+</script>
+@endpush
 @endsection

@@ -48,8 +48,8 @@
                             <div class="text-sm font-semibold text-muted-ink">{{ $competition->category }} - {{ $competition->type ?: 'Umum' }}</div>
                             <h2 class="mt-1 font-display text-2xl font-bold">{{ $competition->title }}</h2>
                         </div>
-                        <span class="{{ $statusClasses[$competition->status] ?? 'siperlo-status siperlo-status-neutral' }}">
-                            {{ $statusLabels[$competition->status] ?? ucfirst($competition->status) }}
+                        <span class="{{ $statusClasses[$competition->displayStatus()] ?? 'siperlo-status siperlo-status-neutral' }}">
+                            {{ $statusLabels[$competition->displayStatus()] ?? ucfirst($competition->displayStatus()) }}
                         </span>
                     </div>
 

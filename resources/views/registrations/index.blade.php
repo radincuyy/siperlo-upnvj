@@ -28,7 +28,7 @@
         </span>
         <span class="inline-flex items-center gap-1.5 {{ $actionCount > 0 ? 'text-amber-800' : '' }}">
             <x-lucide-triangle-alert class="h-4 w-4 {{ $actionCount > 0 ? 'text-amber-700' : 'text-muted-ink' }}" aria-hidden="true" />
-            <span class="font-semibold {{ $actionCount > 0 ? 'text-amber-800' : 'text-ink' }}">{{ $actionCount }}</span> perlu tindakan
+            <span class="font-semibold {{ $actionCount > 0 ? 'text-amber-800' : 'text-ink' }}">{{ $actionCount }}</span> Perlu Tindakan
         </span>
         <span class="inline-flex items-center gap-1.5">
             <x-lucide-circle-check class="h-4 w-4 text-muted-ink" aria-hidden="true" />

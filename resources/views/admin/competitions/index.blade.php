@@ -58,8 +58,8 @@
                             <div class="mt-1 text-xs text-muted-ink">{{ $competition->registration_deadline->translatedFormat('H:i') }}</div>
                         </td>
                         <td class="px-5 py-4">
-                            <span class="{{ $statusClasses[$competition->status] ?? 'siperlo-status siperlo-status-neutral' }}">
-                                {{ $statusLabels[$competition->status] ?? ucfirst($competition->status) }}
+                            <span class="{{ $statusClasses[$competition->displayStatus()] ?? 'siperlo-status siperlo-status-neutral' }}">
+                                {{ $statusLabels[$competition->displayStatus()] ?? ucfirst($competition->displayStatus()) }}
                             </span>
                         </td>
                         <td class="px-5 py-4 font-semibold text-ink">{{ $competition->registrations_count }}</td>
@@ -118,8 +118,8 @@
                         <div class="font-semibold text-ink">{{ $competition->title }}</div>
                         <div class="mt-1 text-sm text-muted-ink">{{ $competition->organizer }}</div>
                     </div>
-                    <span class="{{ $statusClasses[$competition->status] ?? 'siperlo-status siperlo-status-neutral' }} shrink-0">
-                        {{ $statusLabels[$competition->status] ?? ucfirst($competition->status) }}
+                    <span class="{{ $statusClasses[$competition->displayStatus()] ?? 'siperlo-status siperlo-status-neutral' }} shrink-0">
+                        {{ $statusLabels[$competition->displayStatus()] ?? ucfirst($competition->displayStatus()) }}
                     </span>
                 </div>
                 <dl class="mt-3 grid grid-cols-2 gap-2 text-xs text-ink/80">
