@@ -46,7 +46,7 @@
     </div>
 
     {{-- Info tambahan: lebih ringan --}}
-    <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+    <dl class="siperlo-stagger grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-md border border-border-line bg-panel p-4">
             <dt class="text-xs font-semibold uppercase text-muted-ink">Total Lomba</dt>
             <dd class="mt-1 font-display text-2xl font-bold text-ink">{{ $stats['competitions'] }}</dd>
@@ -182,7 +182,22 @@
             <span class="siperlo-status siperlo-status-neutral">{{ array_sum($chartTrend['values']) }} total</span>
         </div>
         <div class="mt-4 h-64">
-            <canvas id="siperlo-chart-trend" aria-label="Grafik tren pendaftaran 6 bulan terakhir" role="img"></canvas>
+            @if (empty($chartTrend['values']) || array_sum($chartTrend['values']) === 0)
+                <div class="flex h-full items-center justify-center text-sm text-muted-ink">Belum ada data pendaftaran dalam 6 bulan terakhir.</div>
+            @else
+                <canvas id="siperlo-chart-trend" aria-label="Grafik tren pendaftaran 6 bulan terakhir" role="img"></canvas>
+                <div class="sr-only">
+                    <table>
+                        <caption>Data tren pendaftaran 6 bulan</caption>
+                        <thead><tr><th>Bulan</th><th>Pendaftaran</th></tr></thead>
+                        <tbody>
+                            @foreach ($chartTrend['labels'] as $i => $label)
+                                <tr><td>{{ $label }}</td><td>{{ $chartTrend['values'][$i] ?? 0 }}</td></tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -194,6 +209,17 @@
                 <div class="flex h-full items-center justify-center text-sm text-muted-ink">Belum ada data pendaftaran.</div>
             @else
                 <canvas id="siperlo-chart-category" aria-label="Grafik pendaftaran per kategori lomba" role="img"></canvas>
+                <div class="sr-only">
+                    <table>
+                        <caption>Data pendaftaran per kategori</caption>
+                        <thead><tr><th>Kategori</th><th>Pendaftaran</th></tr></thead>
+                        <tbody>
+                            @foreach ($chartByCategory['labels'] as $i => $label)
+                                <tr><td>{{ $label }}</td><td>{{ $chartByCategory['values'][$i] ?? 0 }}</td></tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             @endif
         </div>
     </div>
@@ -207,7 +233,22 @@
             <span class="siperlo-status siperlo-status-neutral">{{ array_sum($chartResults['values']) }} pendaftaran</span>
         </div>
         <div class="mt-4 h-56">
-            <canvas id="siperlo-chart-results" aria-label="Grafik sebaran hasil lomba" role="img"></canvas>
+            @if (empty($chartResults['values']) || array_sum($chartResults['values']) === 0)
+                <div class="flex h-full items-center justify-center text-sm text-muted-ink">Belum ada data hasil lomba.</div>
+            @else
+                <canvas id="siperlo-chart-results" aria-label="Grafik sebaran hasil lomba" role="img"></canvas>
+                <div class="sr-only">
+                    <table>
+                        <caption>Data sebaran hasil lomba</caption>
+                        <thead><tr><th>Status</th><th>Jumlah</th></tr></thead>
+                        <tbody>
+                            @foreach ($chartResults['labels'] as $i => $label)
+                                <tr><td>{{ $label }}</td><td>{{ $chartResults['values'][$i] ?? 0 }}</td></tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </div>
     </div>
 </section>
@@ -218,12 +259,16 @@
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof Chart === 'undefined') return;
 
-        const campusGreen = '#155b32';
-        const campusGreenSoft = 'rgba(21, 91, 50, 0.18)';
-        const campusGold = '#d7a82f';
-        const ink = '#17201b';
-        const mutedInk = '#5f6b60';
-        const borderLine = '#dbe2d9';
+        const style = getComputedStyle(document.documentElement);
+        const campusGreen = style.getPropertyValue('--siperlo-chart-green').trim() || '#155b32';
+        const campusGreenSoft = style.getPropertyValue('--siperlo-chart-green-soft').trim() || 'rgba(21, 91, 50, 0.18)';
+        const campusGold = style.getPropertyValue('--siperlo-gold').trim() || '#d7a82f';
+        const ink = style.getPropertyValue('--siperlo-ink').trim() || '#17201b';
+        const mutedInk = style.getPropertyValue('--siperlo-muted').trim() || '#5f6b60';
+        const borderLine = style.getPropertyValue('--siperlo-line').trim() || '#dbe2d9';
+        const chartEmerald = style.getPropertyValue('--siperlo-chart-emerald').trim() || '#22c55e';
+        const chartRed = style.getPropertyValue('--siperlo-chart-red').trim() || '#dc2626';
+        const chartSlate = style.getPropertyValue('--siperlo-chart-slate').trim() || '#94a3b8';
 
         Chart.defaults.font.family = "'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif";
         Chart.defaults.color = mutedInk;
@@ -302,7 +347,7 @@
                     datasets: [{
                         label: 'Pendaftaran',
                         data: @json($chartResults['values']),
-                        backgroundColor: [campusGreen, '#22c55e', campusGold, '#dc2626', '#94a3b8'],
+                        backgroundColor: [campusGreen, chartEmerald, campusGold, chartRed, chartSlate],
                         borderRadius: 4,
                         maxBarThickness: 56,
                     }],

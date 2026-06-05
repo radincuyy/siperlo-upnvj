@@ -11,7 +11,6 @@
             <h2 class="font-display text-xl font-bold">Daftar Mentor</h2>
             <p class="mt-1 text-sm text-ink/80">Mentor bersifat opsional. Pilih dosen hanya jika kamu membutuhkan arahan persiapan lomba.</p>
         </div>
-        <span class="siperlo-pill px-3 py-1 text-xs">{{ $mentors->total() }} mentor aktif</span>
     </div>
 
     <form method="GET" action="{{ route('mentors.index') }}" class="mt-5 grid gap-3 sm:grid-cols-[1fr_120px]">
@@ -37,7 +36,6 @@
                 <div class="min-w-0">
                     <div class="text-sm font-semibold text-campus-green">{{ $mentor->expertise }}</div>
                     <h3 class="mt-2 font-display text-xl font-bold leading-snug">{{ $mentor->user->name }}</h3>
-                    <span class="siperlo-status siperlo-status-success mt-2">Aktif</span>
                 </div>
             </div>
             <p class="mt-4 line-clamp-3 text-sm leading-6 text-ink/80">{{ $mentor->bio }}</p>

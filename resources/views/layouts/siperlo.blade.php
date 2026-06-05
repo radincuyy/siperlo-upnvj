@@ -104,7 +104,8 @@
     <aside
         x-trap.noscroll="drawer"
         :class="drawer ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-        class="fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] transform border-r border-border-line bg-campus-green-deep text-white transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:bottom-auto lg:h-screen lg:self-start lg:transform-none"
+        class="fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] transform border-r border-border-line bg-campus-green-deep text-white transition-transform duration-200 lg:sticky lg:top-0 lg:bottom-auto lg:h-screen lg:self-start lg:transform-none"
+        style="transition-timing-function: var(--siperlo-ease-out-quart)"
         :aria-hidden="(isDesktop || drawer) ? 'false' : 'true'"
         aria-label="Navigasi utama">
         <div class="flex h-full flex-col"
@@ -173,7 +174,7 @@
             </div>
         </header>
 
-        <div class="siperlo-reveal px-4 py-5 sm:px-5 lg:px-8 lg:py-6">
+        <div class="siperlo-reveal mx-auto max-w-[1400px] px-4 py-5 sm:px-5 lg:px-8 lg:py-6">
             @if (session('success'))
                 <div role="status" aria-live="polite" class="mb-5 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
                     {{ session('success') }}

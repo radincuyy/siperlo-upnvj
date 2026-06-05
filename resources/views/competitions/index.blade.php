@@ -51,7 +51,7 @@
             <span>{{ $totalResults }} lomba ditampilkan{{ $hasFilter ? ' dari filter yang dipilih' : '' }}.</span>
         </div>
 
-        <div class="mt-5 grid gap-5 lg:grid-cols-2">
+        <div class="mt-5 grid gap-5 lg:grid-cols-2 siperlo-stagger">
             @forelse ($competitions as $competition)
                 @php
                     $registered = in_array($competition->id, $registeredCompetitionIds, true);

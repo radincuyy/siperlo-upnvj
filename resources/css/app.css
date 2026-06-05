@@ -35,22 +35,7 @@
     src: url('/fonts/atkinson-hyperlegible-latin-ext-700-normal.woff2') format('woff2');
     unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
-@font-face {
-    font-family: 'Literata';
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-    src: url('/fonts/literata-latin-600-normal.woff2') format('woff2');
-    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-    font-family: 'Literata';
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-    src: url('/fonts/literata-latin-ext-600-normal.woff2') format('woff2');
-    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
+/* Literata 600 removed — DESIGN.md only uses weight 700. */
 @font-face {
     font-family: 'Literata';
     font-style: normal;
@@ -79,6 +64,13 @@
         --siperlo-paper: #fbfcf7;
         --siperlo-panel: #ffffff;
         --siperlo-ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+        /* Chart semantic tokens */
+        --siperlo-chart-green: #155b32;
+        --siperlo-chart-green-soft: rgba(21, 91, 50, 0.18);
+        --siperlo-chart-emerald: #22c55e;
+        --siperlo-chart-red: #dc2626;
+        --siperlo-chart-slate: #94a3b8;
     }
 
     body {
@@ -154,6 +146,11 @@
         box-shadow: 0 12px 24px rgba(21, 91, 50, .22);
     }
 
+    .siperlo-btn-primary:active {
+        transform: translateY(1px);
+        box-shadow: 0 4px 10px rgba(21, 91, 50, .14);
+    }
+
     .siperlo-btn-primary:focus-visible,
     .siperlo-btn-secondary:focus-visible,
     .siperlo-btn-danger:focus-visible,
@@ -184,6 +181,10 @@
         background: #f4f7f0;
     }
 
+    .siperlo-btn-secondary:active {
+        transform: translateY(1px);
+    }
+
     .siperlo-btn-danger {
         display: inline-flex;
         min-height: 44px;
@@ -204,6 +205,11 @@
     .siperlo-btn-danger:hover {
         background: #991b1b;
         box-shadow: 0 12px 24px rgba(185, 28, 28, .2);
+    }
+
+    .siperlo-btn-danger:active {
+        transform: translateY(1px);
+        box-shadow: 0 4px 10px rgba(185, 28, 28, .12);
     }
 
     .siperlo-pill {
@@ -382,6 +388,37 @@
     .siperlo-reveal {
         animation: siperlo-reveal .28s ease both;
     }
+
+    .siperlo-stagger > * {
+        animation: siperlo-reveal .28s ease both;
+    }
+
+    .siperlo-stagger > *:nth-child(1)  { animation-delay: 0ms; }
+    .siperlo-stagger > *:nth-child(2)  { animation-delay: 60ms; }
+    .siperlo-stagger > *:nth-child(3)  { animation-delay: 120ms; }
+    .siperlo-stagger > *:nth-child(4)  { animation-delay: 180ms; }
+    .siperlo-stagger > *:nth-child(5)  { animation-delay: 240ms; }
+    .siperlo-stagger > *:nth-child(6)  { animation-delay: 300ms; }
+    .siperlo-stagger > *:nth-child(7)  { animation-delay: 360ms; }
+    .siperlo-stagger > *:nth-child(8)  { animation-delay: 420ms; }
+    .siperlo-stagger > *:nth-child(9)  { animation-delay: 480ms; }
+    .siperlo-stagger > *:nth-child(10) { animation-delay: 540ms; }
+    .siperlo-stagger > *:nth-child(n+11) { animation-delay: 600ms; }
+
+    .siperlo-skeleton {
+        position: relative;
+        overflow: hidden;
+        border-radius: .375rem;
+        background: #edf2f7;
+    }
+
+    .siperlo-skeleton::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
+        animation: siperlo-shimmer 1.6s infinite;
+    }
 }
 
 @keyframes siperlo-reveal {
@@ -396,6 +433,11 @@
     }
 }
 
+@keyframes siperlo-shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -406,7 +448,12 @@
         transition-duration: .01ms !important;
     }
 
-    .siperlo-reveal {
+    .siperlo-reveal,
+    .siperlo-stagger > * {
+        animation: none;
+    }
+
+    .siperlo-skeleton::after {
         animation: none;
     }
 }
