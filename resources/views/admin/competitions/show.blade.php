@@ -13,7 +13,7 @@
 @section('content')
 @php
     $posterUrl = $competition->poster_image
-        ? \Illuminate\Support\Facades\Storage::url($competition->poster_image)
+        ? (str_starts_with($competition->poster_image, 'http') ? $competition->poster_image : \Illuminate\Support\Facades\Storage::url($competition->poster_image))
         : asset('brand/siperlo-campus.svg');
 
     $guidebookUrl = $competition->guidebook_file
@@ -38,11 +38,15 @@
 <div class="grid gap-6 xl:grid-cols-[1fr_340px]">
     <section class="space-y-5">
         <div class="siperlo-surface overflow-hidden rounded-md">
-            <div class="grid gap-0 lg:grid-cols-[280px_1fr]">
-                <div class="bg-soft-green p-4">
-                    <img src="{{ $posterUrl }}" alt="Poster atau ilustrasi lomba {{ $competition->title }}" decoding="async" class="aspect-[4/5] w-full rounded-md border border-border-line object-cover">
+            <div class="grid grid-cols-[240px_1fr]">
+                <div class="flex items-center justify-center bg-soft-green p-4">
+                    <img src="{{ $posterUrl }}"
+                         alt="Poster atau ilustrasi lomba {{ $competition->title }}"
+                         decoding="async"
+                         class="w-full rounded-md border border-border-line object-contain"
+                         style="max-height: 340px;">
                 </div>
-                <div class="p-6">
+                <div class="flex flex-col p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <div class="text-sm font-semibold text-muted-ink">{{ $competition->category }} - {{ $competition->type ?: 'Umum' }}</div>
@@ -53,29 +57,76 @@
                         </span>
                     </div>
 
-                    <p class="mt-5 leading-7 text-ink/80">{{ $competition->description ?: 'Belum ada deskripsi lomba.' }}</p>
-
-                    <dl class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                        <div class="siperlo-data-cell">
-                            <dt class="font-semibold text-ink">Deadline</dt>
-                            <dd class="mt-1 text-ink/80">{{ $competition->registration_deadline->translatedFormat('d M Y H:i') }}</dd>
+                    <dl class="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border-line pt-5 text-sm">
+                        <div class="flex items-start gap-2">
+                            <x-lucide-calendar class="mt-0.5 h-4 w-4 shrink-0 text-campus-green" aria-hidden="true" />
+                            <div>
+                                <dt class="text-xs uppercase tracking-wide text-muted-ink">Deadline</dt>
+                                <dd class="font-semibold text-ink">{{ $competition->registration_deadline->translatedFormat('d M Y H:i') }}</dd>
+                            </div>
                         </div>
-                        <div class="siperlo-data-cell">
-                            <dt class="font-semibold text-ink">Pelaksanaan</dt>
-                            <dd class="mt-1 text-ink/80">{{ optional($competition->event_start)->translatedFormat('d M Y') ?: '-' }} sampai {{ optional($competition->event_end)->translatedFormat('d M Y') ?: '-' }}</dd>
+                        <div class="flex items-start gap-2">
+                            <x-lucide-calendar class="mt-0.5 h-4 w-4 shrink-0 text-campus-green" aria-hidden="true" />
+                            <div>
+                                <dt class="text-xs uppercase tracking-wide text-muted-ink">Pelaksanaan</dt>
+                                <dd class="font-semibold text-ink">{{ optional($competition->event_start)->translatedFormat('d M Y') ?: '-' }} sampai {{ optional($competition->event_end)->translatedFormat('d M Y') ?: '-' }}</dd>
+                            </div>
                         </div>
-                        <div class="siperlo-data-cell">
-                            <dt class="font-semibold text-ink">Biaya</dt>
-                            <dd class="mt-1 text-ink/80">{{ $competition->fee > 0 ? 'Rp '.number_format($competition->fee, 0, ',', '.') : 'Gratis' }}</dd>
+                        <div class="flex items-start gap-2">
+                            <x-lucide-wallet class="mt-0.5 h-4 w-4 shrink-0 text-campus-green" aria-hidden="true" />
+                            <div>
+                                <dt class="text-xs uppercase tracking-wide text-muted-ink">Biaya</dt>
+                                <dd class="font-semibold text-ink">{{ $competition->fee > 0 ? 'Rp '.number_format($competition->fee, 0, ',', '.') : 'Gratis' }}</dd>
+                            </div>
                         </div>
-                        <div class="siperlo-data-cell">
-                            <dt class="font-semibold text-ink">Pendaftar</dt>
-                            <dd class="mt-1 text-ink/80">{{ $competition->registrations->count() }} mahasiswa</dd>
+                        <div class="flex items-start gap-2">
+                            <x-lucide-users class="mt-0.5 h-4 w-4 shrink-0 text-campus-green" aria-hidden="true" />
+                            <div>
+                                <dt class="text-xs uppercase tracking-wide text-muted-ink">Pendaftar</dt>
+                                <dd class="font-semibold text-ink">{{ $competition->registrations->count() }} mahasiswa</dd>
+                            </div>
                         </div>
                     </dl>
                 </div>
             </div>
         </div>
+
+        {{-- Description Card --}}
+        @if ($competition->description)
+            @php
+                $descLength = mb_strlen($competition->description);
+                $isLong = $descLength > 400;
+            @endphp
+            <div class="siperlo-surface rounded-md p-6" x-data="{ expanded: {{ $isLong ? 'false' : 'true' }} }">
+                <div class="flex items-center gap-2 mb-4">
+                    <x-lucide-file-text class="h-4 w-4 text-campus-green" aria-hidden="true" />
+                    <h3 class="font-display text-lg font-bold">Deskripsi Lomba</h3>
+                </div>
+                <div class="relative leading-7 text-ink/80"
+                     :class="{ 'max-h-[200px] overflow-hidden': !expanded }">
+                    @php
+                        $cleanDesc = preg_replace('/\n{3,}/', "\n\n", $competition->description);
+                        $paragraphs = preg_split('/\n\n/', $cleanDesc);
+                    @endphp
+                    <div class="description-content">
+                        @foreach ($paragraphs as $para)
+                            @if (trim($para) !== '')
+                                <p class="mb-3">{!! nl2br(e(trim($para))) !!}</p>
+                            @endif
+                        @endforeach
+                    </div>
+                    <div x-show="!expanded"
+                         class="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent">
+                    </div>
+                </div>
+                @if ($isLong)
+                    <button @click="expanded = !expanded"
+                            class="mt-2 text-sm font-semibold text-campus-green hover:underline focus:outline-none"
+                            x-text="expanded ? '⬆ Sembunyikan' : '⬇ Baca Selengkapnya'">
+                    </button>
+                @endif
+            </div>
+        @endif
 
         <div class="siperlo-surface rounded-md p-5">
             <div class="flex flex-wrap items-center justify-between gap-3">

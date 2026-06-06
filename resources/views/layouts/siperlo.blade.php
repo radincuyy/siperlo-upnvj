@@ -174,7 +174,7 @@
             </div>
         </header>
 
-        <div class="siperlo-reveal mx-auto max-w-[1400px] px-4 py-5 sm:px-5 lg:px-8 lg:py-6">
+        <div class="siperlo-reveal px-4 py-5 sm:px-5 lg:px-8 lg:py-6">
             @if (session('success'))
                 <div role="status" aria-live="polite" class="mb-5 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
                     {{ session('success') }}

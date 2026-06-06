@@ -56,7 +56,7 @@
                 @php
                     $registered = in_array($competition->id, $registeredCompetitionIds, true);
                     $posterUrl = $competition->poster_image
-                        ? \Illuminate\Support\Facades\Storage::url($competition->poster_image)
+                        ? (str_starts_with($competition->poster_image, 'http') ? $competition->poster_image : \Illuminate\Support\Facades\Storage::url($competition->poster_image))
                         : asset('brand/siperlo-mark.png');
                     $displayStatus = $competition->displayStatus();
                     $statusClass = match ($displayStatus) {

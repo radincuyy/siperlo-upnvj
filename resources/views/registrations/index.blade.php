@@ -122,7 +122,7 @@
                 default => 'siperlo-status siperlo-status-neutral',
             };
             $posterUrl = $registration->competition->poster_image
-                ? \Illuminate\Support\Facades\Storage::url($registration->competition->poster_image)
+                ? (str_starts_with($registration->competition->poster_image, 'http') ? $registration->competition->poster_image : \Illuminate\Support\Facades\Storage::url($registration->competition->poster_image))
                 : asset('brand/siperlo-mark.png');
         @endphp
         <article class="siperlo-surface divide-y divide-border-line rounded-md">
