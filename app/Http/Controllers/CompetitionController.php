@@ -26,6 +26,7 @@ class CompetitionController extends Controller
             })
             ->when($request->filled('category') && $request->category !== 'all', fn ($query) => $query->where('category', $request->category))
             ->when($request->filled('type') && $request->type !== 'all', fn ($query) => $query->where('type', $request->type))
+            ->orderByRaw("CASE WHEN registration_deadline >= NOW() THEN 0 ELSE 1 END")
             ->orderBy('registration_deadline')
             ->paginate(8)
             ->withQueryString();
