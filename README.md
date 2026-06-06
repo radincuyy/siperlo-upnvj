@@ -38,9 +38,15 @@ SIPERLO bukan marketing page. Tampilan dirancang seperti operations desk: status
 - Mengajukan bantuan dana (opsional)
 - Melaporkan hasil lomba setelah selesai
 
+### Integrasi Scraper (infolomba.id)
+
+- Scrape otomatis data kompetisi terbaru dari portal eksternal
+- Kategorisasi otomatis berdasarkan pemetaan kata kunci
+- Pengayaan informasi (Timeline, Requirements, Benefits) otomatis
+
 ### Admin Kemahasiswaan
 
-- Mengelola katalog lomba
+- Mengelola katalog lomba (buat baru atau edit data hasil scrape)
 - Review antrian pendaftaran, pengajuan mentor, dan pengajuan dana
 - Validasi laporan hasil lomba dengan status lifecycle yang terkunci
 
@@ -57,6 +63,7 @@ SIPERLO bukan marketing page. Tampilan dirancang seperti operations desk: status
 | Area       | Tool                                                             |
 | ---------- | ---------------------------------------------------------------- |
 | Backend    | PHP 8.2+, Laravel 12, Laravel Socialite (Google OAuth)           |
+| Scraper    | Symfony DomCrawler & CssSelector                                 |
 | Frontend   | Blade, Tailwind CSS 3, Alpine.js                                 |
 | Database   | MySQL 8 (utf8mb4), mudah diganti ke PostgreSQL atau SQLite       |
 | Icon       | Lucide via `mallardduck/blade-lucide-icons`                      |
@@ -105,6 +112,27 @@ Buka `http://localhost:8000`. Aplikasi akan redirect ke halaman login.
 > [!IMPORTANT]
 > Login dengan Google memerlukan `GOOGLE_CLIENT_ID` dan `GOOGLE_CLIENT_SECRET` di `.env`. Tanpa kedua value tersebut, tombol Google akan menampilkan pesan "belum dikonfigurasi" dan flow email/password tetap berfungsi.
 
+## Scraper Lomba (infolomba.id)
+
+SIPERLO dilengkapi dengan modul scraper otomatis untuk mengimpor info lomba terbaru. Jalankan perintah berikut secara berurutan atau jadwalkan via scheduler:
+
+1. **Scrape Lomba Terbaru**: Mengambil data list lomba dari infolomba.id
+   ```bash
+   php artisan scrape:infolomba
+   ```
+2. **Pengayaan Informasi**: Melengkapi deskripsi, persyaratan, benefit, dan timeline detail lomba
+   ```bash
+   php artisan scrape:enrich
+   ```
+3. **Kategorisasi Otomatis**: Mengelompokkan jenis lomba berdasarkan kata kunci
+   ```bash
+   php artisan scrape:categorize
+   ```
+4. **Pembersihan Data**: Menghapus data duplikat atau usang dari database
+   ```bash
+   php artisan scrape:clean
+   ```
+
 ## Akun seed
 
 Database seeder menyiapkan enam akun demo untuk setiap peran.
@@ -126,12 +154,15 @@ Database seeder menyiapkan enam akun demo untuk setiap peran.
 ```
 app/
 ├── app/
+│   ├── Console/
+│   │   └── Commands/          # Scraper artisan commands (scrape:infolomba, dsb.)
 │   ├── Enums/                 # Enum status lifecycle (ReviewStatus, ResultStatus, dsb.)
 │   ├── Http/
 │   │   ├── Controllers/       # Web + admin + auth controllers
 │   │   ├── Middleware/        # RoleMiddleware (mahasiswa, admin, mentor, pimpinan)
 │   │   └── Requests/          # Form request validation
-│   └── Models/                # Eloquent models (Competition, Registration, Mentor, dst.)
+│   ├── Models/                # Eloquent models (Competition, Registration, Mentor, dst.)
+│   └── Services/              # Service helper seperti InfoLombaScraperService
 ├── database/
 │   ├── migrations/            # Schema lomba, pendaftaran, mentor, dana, hasil
 │   └── seeders/               # DatabaseSeeder dengan akun + lomba demo
