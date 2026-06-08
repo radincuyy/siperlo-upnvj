@@ -154,11 +154,9 @@ Database seeder menyiapkan enam akun demo untuk setiap peran.
 ```
 app/
 ├── app/
-│   ├── Console/
-│   │   └── Commands/          # Scraper artisan commands (scrape:infolomba, dsb.)
-│   ├── Enums/                 # Enum status lifecycle (ReviewStatus, ResultStatus, dsb.)
+│   ├── Console/Commands/      # Artisan commands scraper dan data maintenance
 │   ├── Http/
-│   │   ├── Controllers/       # Web + admin + auth controllers
+│   │   ├── Controllers/       # Controller mahasiswa, admin, auth, dashboard, SOP
 │   │   ├── Middleware/        # RoleMiddleware (mahasiswa, admin, mentor, pimpinan)
 │   │   └── Requests/          # Form request validation
 │   ├── Models/                # Eloquent models (Competition, Registration, Mentor, dst.)
@@ -166,13 +164,18 @@ app/
 ├── database/
 │   ├── migrations/            # Schema lomba, pendaftaran, mentor, dana, hasil
 │   └── seeders/               # DatabaseSeeder dengan akun + lomba demo
+├── docs/                      # Dokumen operasional: POB Markdown + visual pendukung
+├── public/
+│   ├── brand/                 # Logo/ilustrasi SIPERLO
+│   └── fonts/                 # Font self-hosted
 ├── resources/
-│   ├── css/                   # Self-hosted font, design tokens, component classes
+│   ├── css/                   # Design tokens dan component classes
 │   ├── js/                    # Alpine.js bootstrap
 │   └── views/                 # Blade templates dengan design system siperlo
 ├── routes/
 │   ├── web.php                # Routes mahasiswa, admin, mentor, pimpinan
 │   └── auth.php               # Routes autentikasi (Breeze + Google)
+├── storage/                   # Runtime files; hanya .gitignore yang dicommit
 └── tests/                     # Feature tests untuk flow autentikasi dan inti
 ```
 
