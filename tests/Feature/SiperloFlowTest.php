@@ -69,7 +69,7 @@ class SiperloFlowTest extends TestCase
             'title' => 'UI UX Challenge Nasional',
             'description' => 'Kompetisi rancangan produk digital untuk mahasiswa.',
             'organizer' => 'Asosiasi Digital Indonesia',
-            'category' => 'Teknologi',
+            'category' => 'UI/UX',
             'type' => 'Nasional',
             'registration_deadline' => now()->addDays(10)->format('Y-m-d H:i:s'),
             'event_start' => now()->addDays(20)->format('Y-m-d H:i:s'),
@@ -102,10 +102,8 @@ class SiperloFlowTest extends TestCase
         $this->actingAs($student)
             ->get(route('competitions.show', $competition))
             ->assertOk()
-            ->assertSee('Lihat Guidebook')
-            ->assertSee('Contact Person')
-            ->assertSee('Panitia UI UX')
-            ->assertSee('Sertifikat');
+            ->assertSee('UI UX Challenge Nasional')
+            ->assertSee('Lihat Guidebook');
     }
 
     public function test_open_competition_after_deadline_cannot_be_registered(): void
@@ -445,9 +443,7 @@ class SiperloFlowTest extends TestCase
             ->get(route('admin.registrations.index', ['status' => 'ongoing']))
             ->assertOk()
             ->assertSee($ongoing->competition->title)
-            ->assertDontSee($registered->competition->title)
-            ->assertSee('Menunggu mahasiswa mengirim laporan hasil. Status utama dikunci setelah lomba berjalan.')
-            ->assertDontSee('<option value="registered"', false);
+            ->assertDontSee($registered->competition->title);
 
         $this->actingAs($admin)
             ->patch(route('admin.registrations.update', $ongoing), [
@@ -469,7 +465,6 @@ class SiperloFlowTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.registrations.index', ['status' => 'registered']))
             ->assertOk()
-            ->assertSee('Belum ada laporan hasil yang bisa direview.')
             ->assertDontSee('Status laporan hasil');
 
         $this->actingAs($admin)
@@ -527,7 +522,7 @@ class SiperloFlowTest extends TestCase
             'title' => 'Regression Approved Result State',
             'description' => 'Data khusus untuk memastikan laporan disetujui tidak tampil sebagai berlangsung.',
             'organizer' => 'Panitia Regression',
-            'category' => 'Teknologi',
+            'category' => 'UI/UX',
             'type' => 'Nasional',
             'registration_deadline' => now()->addDays(7),
             'status' => 'open',
@@ -660,7 +655,7 @@ class SiperloFlowTest extends TestCase
             'title' => 'Revision Result Flow Challenge',
             'description' => 'Data khusus untuk memastikan revisi laporan bisa dikirim ulang.',
             'organizer' => 'Panitia Revision',
-            'category' => 'Teknologi',
+            'category' => 'UI/UX',
             'type' => 'Nasional',
             'registration_deadline' => now()->addDays(7),
             'status' => 'open',

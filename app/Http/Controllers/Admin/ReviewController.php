@@ -71,15 +71,39 @@ class ReviewController extends Controller
     public function updateRegistration(Request $request, Registration $registration): RedirectResponse
     {
         $data = $request->validate([
-            'status' => ['required', 'in:registered,ongoing,finished'],
+            'status' => ['nullable', 'in:registered,ongoing,finished'],
             'result' => ['nullable', 'string', 'max:255'],
             'result_status' => ['nullable', 'in:pending,approved,rejected,revision'],
             'result_admin_notes' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
+            'proof_status' => ['nullable', 'in:pending,verified,rejected'],
+            'proof_admin_notes' => ['required_if:proof_status,rejected', 'nullable', 'string'],
         ]);
 
+        if (isset($data['proof_status'])) {
+            if ($data['proof_status'] === 'verified') {
+                $data['proof_verified_at'] = now();
+
+                // Bukti terverifikasi adalah satu-satunya pintu dari Terdaftar → Berlangsung.
+                if ($registration->primaryStatus() === 'registered') {
+                    $data['status'] = 'ongoing';
+                }
+            } else {
+                $data['proof_verified_at'] = null;
+            }
+        }
+
+        $effectiveProofStatus = $data['proof_status'] ?? $registration->proof_status;
+
+        // Gate: cannot move to ongoing without verified proof.
+        if (isset($data['status']) && $data['status'] === 'ongoing' && $registration->primaryStatus() === 'registered' && $effectiveProofStatus !== 'verified') {
+            return back()
+                ->withInput()
+                ->with('error', 'Status tidak bisa diubah ke Berlangsung tanpa bukti pendaftaran yang sudah diverifikasi.');
+        }
+
         if (! $registration->hasResultReport()) {
-            if ($data['status'] === 'finished') {
+            if (isset($data['status']) && $data['status'] === 'finished') {
                 return back()
                     ->withInput()
                     ->with('error', 'Status Selesai membutuhkan laporan hasil dari mahasiswa yang sudah divalidasi.');
@@ -91,22 +115,24 @@ class ReviewController extends Controller
         $effectiveResultStatus = $data['result_status'] ?? $registration->result_status;
         $isReviewingResult = array_key_exists('result_status', $data);
 
-        if (! $isReviewingResult && $registration->primaryStatus() === 'ongoing' && $data['status'] !== 'ongoing') {
-            return back()
-                ->withInput()
-                ->with('error', 'Pendaftaran yang sudah Berlangsung tidak dapat dikembalikan ke Terdaftar atau diselesaikan manual. Selesaikan melalui validasi laporan hasil.');
-        }
+        if (isset($data['status'])) {
+            if (! $isReviewingResult && $registration->primaryStatus() === 'ongoing' && $data['status'] !== 'ongoing') {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Pendaftaran yang sudah Berlangsung tidak dapat dikembalikan ke Terdaftar atau diselesaikan manual. Selesaikan melalui validasi laporan hasil.');
+            }
 
-        if (! $isReviewingResult && $registration->hasFinalResult() && in_array($effectiveResultStatus, Registration::FINAL_RESULT_STATUSES, true) && $data['status'] !== 'finished') {
-            return back()
-                ->withInput()
-                ->with('error', 'Pendaftaran dengan laporan hasil final harus tetap berstatus Selesai.');
-        }
+            if (! $isReviewingResult && $registration->hasFinalResult() && in_array($effectiveResultStatus, Registration::FINAL_RESULT_STATUSES, true) && $data['status'] !== 'finished') {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Pendaftaran dengan laporan hasil final harus tetap berstatus Selesai.');
+            }
 
-        if (! $isReviewingResult && $registration->hasResultReport() && $data['status'] === 'finished' && ! in_array($effectiveResultStatus, Registration::FINAL_RESULT_STATUSES, true)) {
-            return back()
-                ->withInput()
-                ->with('error', 'Status Selesai hanya dapat dipilih jika laporan hasil disetujui atau ditolak final.');
+            if (! $isReviewingResult && $registration->hasResultReport() && $data['status'] === 'finished' && ! in_array($effectiveResultStatus, Registration::FINAL_RESULT_STATUSES, true)) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Status Selesai hanya dapat dipilih jika laporan hasil disetujui atau ditolak final.');
+            }
         }
 
         if ($isReviewingResult) {

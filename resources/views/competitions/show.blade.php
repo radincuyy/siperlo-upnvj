@@ -60,12 +60,12 @@
     <div class="siperlo-surface overflow-hidden rounded-md">
         <div class="grid grid-cols-[240px_1fr]">
             {{-- Poster --}}
-            <div class="flex items-center justify-center bg-soft-green p-4">
+            <div class="flex items-center justify-center bg-soft-green p-4 cursor-pointer" @click="$dispatch('open-poster')" title="Klik untuk memperbesar">
                 <img src="{{ $posterUrl }}"
                      alt="Poster lomba {{ $competition->title }}"
                      loading="lazy"
                      decoding="async"
-                     class="w-full rounded-md border border-border-line object-contain"
+                     class="w-full rounded-md border border-border-line object-contain transition-transform duration-200 hover:scale-[1.02]"
                      style="max-height: 340px;">
             </div>
 
@@ -149,7 +149,7 @@
             @if ($isLong)
                 <button @click="expanded = !expanded"
                         class="mt-2 text-sm font-semibold text-campus-green hover:underline focus:outline-none"
-                        x-text="expanded ? '⬆ Sembunyikan' : '⬇ Baca Selengkapnya'">
+                        x-text="expanded ? 'Sembunyikan' : 'Baca Selengkapnya'">
                 </button>
             @endif
         </div>
@@ -166,6 +166,20 @@
                 <div class="flex items-baseline justify-between gap-3 py-2">
                     <dt class="text-muted-ink">Status utama</dt>
                     <dd class="font-semibold text-ink">{{ $registration->primaryStatusLabel() }}</dd>
+                </div>
+                <div class="flex items-baseline justify-between gap-3 py-2">
+                    <dt class="text-muted-ink">Bukti pendaftaran</dt>
+                    <dd>
+                        @if ($registration->isProofVerified())
+                            <span class="siperlo-status siperlo-status-success">Terverifikasi</span>
+                        @elseif ($registration->isProofPending())
+                            <span class="siperlo-status siperlo-status-warning">Menunggu Verifikasi</span>
+                        @elseif ($registration->isProofRejected())
+                            <span class="siperlo-status siperlo-status-danger">Ditolak</span>
+                        @else
+                            <span class="siperlo-status siperlo-status-neutral">Belum Diupload</span>
+                        @endif
+                    </dd>
                 </div>
                 <div class="flex items-baseline justify-between gap-3 py-2">
                     <dt class="text-muted-ink">Mentor opsional</dt>
@@ -186,10 +200,64 @@
                     </div>
                 @endif
             </dl>
+
+            {{-- Proof missing/rejected: show admin notes + upload form --}}
+            @if ($registration->canUploadProof())
+                <div class="mt-4 rounded-md border border-red-200 bg-red-50 p-4">
+                    @if ($registration->isProofRejected() && $registration->proof_admin_notes)
+                        <div class="text-sm text-red-800">
+                            <span class="font-semibold">Alasan penolakan:</span> {{ $registration->proof_admin_notes }}
+                        </div>
+                    @elseif (! $registration->registration_proof_file)
+                        <div class="text-sm text-red-800">
+                            <span class="font-semibold">Bukti belum tersedia.</span> Upload bukti pendaftaran agar admin dapat memverifikasi dan mengubah status menjadi Berlangsung.
+                        </div>
+                    @endif
+                    <form method="POST" action="{{ route('registrations.reupload-proof', $registration) }}" enctype="multipart/form-data" class="mt-3">
+                        @csrf
+                        @method('PATCH')
+                        <label class="text-sm font-semibold text-red-800">{{ $registration->isProofRejected() ? 'Upload ulang bukti pendaftaran' : 'Upload bukti pendaftaran' }}</label>
+                        <label for="reupload-proof-{{ $registration->id }}" class="mt-2 flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed border-red-300 bg-red-50/50 px-4 py-5 transition hover:border-red-400 hover:bg-red-100/50">
+                            <x-lucide-upload-cloud class="h-7 w-7 text-red-400" aria-hidden="true" />
+                            <span class="mt-1 text-sm font-semibold text-red-800">Klik untuk pilih file</span>
+                            <span class="mt-1 text-xs text-red-600">JPG, PNG, atau PDF — maks 2MB</span>
+                            <span id="reupload-file-name-{{ $registration->id }}" class="mt-2 hidden rounded-md bg-red-100 px-3 py-1 text-xs font-semibold text-red-700"></span>
+                        </label>
+                        <input id="reupload-proof-{{ $registration->id }}" type="file" name="registration_proof_file" accept=".jpg,.jpeg,.png,.pdf" required class="sr-only"
+                               onchange="const n=document.getElementById('reupload-file-name-{{ $registration->id }}');if(this.files[0]){n.textContent=this.files[0].name;n.classList.remove('hidden')}else{n.classList.add('hidden')}">
+                        <x-submit-button label="{{ $registration->isProofRejected() ? 'Upload Ulang' : 'Upload Bukti' }}" pending-label="Mengupload..." class="mt-3 w-full" />
+                    </form>
+                </div>
+            @elseif ($registration->isProofPending())
+                <div class="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                    <x-lucide-clock class="mr-1 inline-block h-4 w-4" aria-hidden="true" />
+                    Bukti pendaftaran kamu sedang menunggu verifikasi dari admin.
+                </div>
+            @endif
+
             <a href="{{ route('registrations.index') }}" class="siperlo-btn-primary mt-4 block px-4 py-2 text-center text-sm">Lihat Progress</a>
         @elseif ($competition->isRegistrable() && auth()->user()->isRole('mahasiswa'))
-            <form method="POST" action="{{ route('competitions.register', $competition) }}" class="mt-3">
+            <form method="POST" action="{{ route('competitions.register', $competition) }}" enctype="multipart/form-data" class="mt-3">
                 @csrf
+                <div class="mb-4">
+                    <label class="text-sm font-semibold text-ink">
+                        Bukti Pendaftaran Eksternal <span class="siperlo-required">*</span>
+                    </label>
+                    <p class="mt-1 text-xs text-muted-ink">
+                        Upload screenshot konfirmasi pendaftaran, email konfirmasi, atau bukti nomor peserta dari situs penyelenggara.
+                    </p>
+                    <label for="registration-proof" class="mt-2 flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed border-border-line bg-panel/50 px-4 py-6 transition hover:border-campus-green hover:bg-campus-green/5">
+                        <x-lucide-upload-cloud class="h-8 w-8 text-muted-ink" aria-hidden="true" />
+                        <span class="mt-2 text-sm font-semibold text-ink">Klik untuk pilih file</span>
+                        <span class="mt-1 text-xs text-muted-ink">JPG, PNG, atau PDF — maks 2MB</span>
+                        <span id="proof-file-name" class="mt-2 hidden rounded-md bg-campus-green/10 px-3 py-1 text-xs font-semibold text-campus-green"></span>
+                    </label>
+                    <input id="registration-proof" type="file" name="registration_proof_file" accept=".jpg,.jpeg,.png,.pdf" required class="sr-only"
+                           onchange="const n=document.getElementById('proof-file-name');if(this.files[0]){n.textContent=this.files[0].name;n.classList.remove('hidden')}else{n.classList.add('hidden')}">
+                    @error('registration_proof_file')
+                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
                 <x-submit-button label="Daftar Sekarang" pending-label="Mendaftarkan..." class="w-full" />
             </form>
         @else
@@ -245,3 +313,39 @@
 
 </div>
 @endsection
+
+@push('modals')
+    {{-- Fullscreen Poster Modal --}}
+    <div x-data="{ open: false }"
+         x-show="open" 
+         @open-poster.window="open = true"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="open = false"
+         @keydown.escape.window="open = false"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 cursor-pointer"
+         style="display: none;"
+         x-cloak>
+         
+         <div class="siperlo-surface w-full max-w-md rounded-lg shadow-xl overflow-hidden cursor-default" @click.stop>
+             <!-- Modal Header -->
+             <div class="flex items-center justify-between border-b border-border-line px-4 py-3 bg-panel">
+                 <h3 class="font-display font-bold text-ink">Poster Lomba</h3>
+                 <button @click="open = false" class="text-muted-ink hover:text-ink transition-colors cursor-pointer" aria-label="Tutup">
+                     <x-lucide-x class="h-5 w-5" />
+                 </button>
+             </div>
+             
+             <!-- Modal Content -->
+             <div class="flex items-center justify-center bg-soft-green p-4">
+                 <img src="{{ $posterUrl }}" 
+                      alt="Poster lomba {{ $competition->title }}" 
+                      class="max-h-[550px] max-w-full object-contain rounded border border-border-line select-none">
+             </div>
+         </div>
+    </div>
+@endpush

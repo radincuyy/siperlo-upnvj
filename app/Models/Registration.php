@@ -24,6 +24,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property \Illuminate\Support\Carbon|null $result_reviewed_at
  * @property string|null $result_admin_notes
  * @property string|null $notes
+ * @property string|null $registration_proof_file
+ * @property string|null $proof_status
+ * @property string|null $proof_admin_notes
+ * @property \Illuminate\Support\Carbon|null $proof_verified_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, MentorRequest> $mentorRequests
  * @property-read \Illuminate\Database\Eloquent\Collection<int, FundRequest> $fundRequests
  */
@@ -50,6 +54,12 @@ class Registration extends Model
 
     public const FINAL_RESULT_STATUSES = ['approved', 'rejected'];
 
+    public const PROOF_STATUSES = [
+        'pending' => 'Menunggu Verifikasi',
+        'verified' => 'Terverifikasi',
+        'rejected' => 'Ditolak',
+    ];
+
     /**
      * @var list<string>
      */
@@ -66,6 +76,10 @@ class Registration extends Model
         'result_reviewed_at',
         'result_admin_notes',
         'notes',
+        'registration_proof_file',
+        'proof_status',
+        'proof_admin_notes',
+        'proof_verified_at',
     ];
 
     /**
@@ -76,6 +90,7 @@ class Registration extends Model
         return [
             'result_submitted_at' => 'datetime',
             'result_reviewed_at' => 'datetime',
+            'proof_verified_at' => 'datetime',
         ];
     }
 
@@ -159,6 +174,32 @@ class Registration extends Model
     public function resultStatusLabel(): string
     {
         return self::RESULT_STATUSES[$this->result_status] ?? 'Belum Dilaporkan';
+    }
+
+    public function proofStatusLabel(): string
+    {
+        return self::PROOF_STATUSES[$this->proof_status] ?? 'Belum Diupload';
+    }
+
+    public function isProofVerified(): bool
+    {
+        return $this->proof_status === 'verified';
+    }
+
+    public function isProofPending(): bool
+    {
+        return $this->proof_status === 'pending';
+    }
+
+    public function isProofRejected(): bool
+    {
+        return $this->proof_status === 'rejected';
+    }
+
+    public function canUploadProof(): bool
+    {
+        return $this->primaryStatus() !== 'finished'
+            && ($this->proof_status === null || $this->proof_status === 'rejected');
     }
 
     public function hasResultReport(): bool

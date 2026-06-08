@@ -15,7 +15,9 @@
 
     $totalCount = $registrations->count();
     $monitoringCount = $registrations->reject(fn ($registration) => $registration->primaryStatus() === 'finished')->count();
-    $actionCount = $registrations->where('result_status', 'revision')->count();
+    $actionCount = $registrations
+        ->filter(fn ($registration) => $registration->result_status === 'revision' || $registration->isProofRejected())
+        ->count();
     $finishedCount = $registrations->filter(fn ($registration) => $registration->primaryStatus() === 'finished')->count();
 @endphp
 
@@ -121,6 +123,12 @@
                 'rejected' => 'siperlo-status siperlo-status-danger',
                 default => 'siperlo-status siperlo-status-neutral',
             };
+            $statusBadgeClasses = match ($registration->primaryStatus()) {
+                'registered' => 'siperlo-status siperlo-status-neutral',
+                'ongoing' => 'siperlo-status siperlo-status-info',
+                'finished' => 'siperlo-status siperlo-status-success',
+                default => 'siperlo-status siperlo-status-neutral',
+            };
             $posterUrl = $registration->competition->poster_image
                 ? (str_starts_with($registration->competition->poster_image, 'http') ? $registration->competition->poster_image : \Illuminate\Support\Facades\Storage::url($registration->competition->poster_image))
                 : asset('brand/siperlo-mark.png');
@@ -140,10 +148,9 @@
                     <div class="min-w-0">
                         <div class="text-xs font-semibold uppercase tracking-[0.14em] text-muted-ink">{{ $registration->competition->category }} · {{ $registration->competition->type }}</div>
                         <h2 class="mt-2 font-display text-2xl font-bold leading-tight lg:text-3xl">{{ $registration->competition->title }}</h2>
-                        <div class="mt-2 text-sm text-ink/80">Status utama: <span class="font-semibold text-ink">{{ $registration->primaryStatusLabel() }}</span></div>
                     </div>
                 </div>
-                <span class="siperlo-pill px-3 py-1 text-xs">{{ $registration->primaryStatusLabel() }}</span>
+                <span class="{{ $statusBadgeClasses }}">{{ $registration->primaryStatusLabel() }}</span>
             </div>
 
             {{-- Progress region --}}
@@ -155,7 +162,7 @@
                     @endphp
                     <div class="flex items-center gap-3 border-b border-border-line px-5 py-3 text-sm font-semibold last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0 {{ $reached ? 'bg-soft-green text-campus-green' : 'text-muted-ink' }}">
                         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold {{ $reached ? 'bg-campus-green text-white' : 'border border-border-line bg-panel text-muted-ink' }}">
-                            @if ($reached && ! $isCurrent)
+                            @if ($reached && (! $isCurrent || $registration->primaryStatus() === 'finished'))
                                 <x-lucide-check class="h-4 w-4" aria-hidden="true" />
                             @else
                                 {{ $loop->iteration }}
@@ -182,6 +189,24 @@
             {{-- Support region (mentor / dana / laporan) --}}
             @php
                 $supportRows = [];
+                // Proof status row
+                $proofBadgeClass = match ($registration->proof_status) {
+                    'verified' => 'siperlo-status siperlo-status-success',
+                    'pending' => 'siperlo-status siperlo-status-warning',
+                    'rejected' => 'siperlo-status siperlo-status-danger',
+                    default => 'siperlo-status siperlo-status-neutral',
+                };
+                $supportRows[] = [
+                    'label' => 'Bukti Pendaftaran',
+                    'badge' => $proofBadgeClass,
+                    'badgeText' => $registration->proofStatusLabel(),
+                    'caption' => match ($registration->proof_status) {
+                        'verified' => 'Bukti sudah diverifikasi admin',
+                        'pending' => 'Menunggu verifikasi admin',
+                        'rejected' => 'Ditolak — upload ulang bukti di Detail Lomba',
+                        default => 'Belum ada bukti pendaftaran',
+                    },
+                ];
                 if ($showMentorSupport) {
                     $supportRows[] = [
                         'label' => 'Mentor',
@@ -212,12 +237,16 @@
                         <dt class="text-xs font-semibold uppercase text-muted-ink">Laporan Hasil</dt>
                         <dd class="text-ink/80">
                             @if ($isResultRevision)
-                                Perlu diperbaiki sebelum admin bisa memvalidasi hasil.
+                                Laporan hasil perlu diperbaiki (baca catatan di bawah)
                             @elseif ($isResultPending)
-                                Laporan sudah dikirim dan sedang menunggu validasi admin.
+                                Laporan sudah dikirim dan sedang menunggu validasi admin
                             @elseif (! $hasResultReport)
-                                Belum ada laporan hasil dari mahasiswa.
-                            @elseif ($registration->result)
+                                Belum ada laporan hasil dari mahasiswa
+                            @elseif ($registration->result_status === 'approved')
+                                Laporan hasil disetujui admin (Capaian: <span class="font-semibold text-ink">{{ $registration->result }}</span>)
+                            @elseif ($registration->result_status === 'rejected')
+                                Laporan hasil ditolak admin (Capaian: <span class="font-semibold text-ink">{{ $registration->result }}</span>)
+                            @else
                                 Capaian: <span class="font-semibold text-ink">{{ $registration->result }}</span>
                             @endif
                         </dd>

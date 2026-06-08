@@ -37,6 +37,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/lomba-saya/{registration}/lapor-hasil', [ResultReportController::class, 'store'])
         ->middleware(['role:mahasiswa', 'throttle:10,1'])
         ->name('registrations.results.store');
+    Route::patch('/lomba-saya/{registration}/upload-bukti', [CompetitionController::class, 'reuploadProof'])
+        ->middleware(['role:mahasiswa', 'throttle:10,1'])
+        ->name('registrations.reupload-proof');
 
     Route::get('/mentor', [MentorController::class, 'index'])->name('mentors.index');
     Route::get('/mentor/{mentor}', [MentorController::class, 'show'])->name('mentors.show');
