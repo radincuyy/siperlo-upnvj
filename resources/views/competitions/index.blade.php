@@ -123,17 +123,19 @@
                     </dl>
 
                     <div class="mt-5 flex flex-wrap items-center gap-3 border-t border-border-line pt-4">
-                        <a href="{{ route('competitions.show', $competition) }}" class="siperlo-btn-secondary px-4 py-2 text-sm">
-                            Lihat Detail
-                        </a>
-
                         @if ($registered)
+                            <a href="{{ route('competitions.show', $competition) }}" class="siperlo-btn-secondary px-4 py-2 text-sm">
+                                Lihat Detail
+                            </a>
                             <span class="siperlo-status siperlo-status-success">Sudah Terdaftar</span>
                         @elseif (auth()->user()->isRole('mahasiswa') && $competition->status === 'open' && ! $competition->registration_deadline->isPast())
-                            <form method="POST" action="{{ route('competitions.register', $competition) }}">
-                                @csrf
-                                <x-submit-button label="Daftar Sekarang" pending-label="Mendaftarkan..." />
-                            </form>
+                            <a href="{{ route('competitions.show', $competition) }}" class="siperlo-btn-primary px-4 py-2 text-sm">
+                                Daftar Sekarang
+                            </a>
+                        @else
+                            <a href="{{ route('competitions.show', $competition) }}" class="siperlo-btn-secondary px-4 py-2 text-sm">
+                                Lihat Detail
+                            </a>
                         @endif
                     </div>
                 </article>

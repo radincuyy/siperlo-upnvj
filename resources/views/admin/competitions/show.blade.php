@@ -39,11 +39,11 @@
     <section class="space-y-5">
         <div class="siperlo-surface overflow-hidden rounded-md">
             <div class="grid grid-cols-[240px_1fr]">
-                <div class="flex items-center justify-center bg-soft-green p-4">
+                <div class="flex items-center justify-center bg-soft-green p-4 cursor-pointer" @click="$dispatch('open-poster')" title="Klik untuk memperbesar">
                     <img src="{{ $posterUrl }}"
                          alt="Poster atau ilustrasi lomba {{ $competition->title }}"
                          decoding="async"
-                         class="w-full rounded-md border border-border-line object-contain"
+                         class="w-full rounded-md border border-border-line object-contain transition-transform duration-200 hover:scale-[1.02]"
                          style="max-height: 340px;">
                 </div>
                 <div class="flex flex-col p-6">
@@ -122,7 +122,7 @@
                 @if ($isLong)
                     <button @click="expanded = !expanded"
                             class="mt-2 text-sm font-semibold text-campus-green hover:underline focus:outline-none"
-                            x-text="expanded ? '⬆ Sembunyikan' : '⬇ Baca Selengkapnya'">
+                            x-text="expanded ? 'Sembunyikan' : 'Baca Selengkapnya'">
                     </button>
                 @endif
             </div>
@@ -201,5 +201,41 @@
             </div>
         </div>
     </aside>
+@push('modals')
+    {{-- Fullscreen Poster Modal --}}
+    <div x-data="{ open: false }"
+         x-show="open" 
+         @open-poster.window="open = true"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="open = false"
+         @keydown.escape.window="open = false"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 cursor-pointer"
+         style="display: none;"
+         x-cloak>
+         
+         <div class="siperlo-surface w-full max-w-md rounded-lg shadow-xl overflow-hidden cursor-default" @click.stop>
+             <!-- Modal Header -->
+             <div class="flex items-center justify-between border-b border-border-line px-4 py-3 bg-panel">
+                 <h3 class="font-display font-bold text-ink">Poster Lomba</h3>
+                 <button @click="open = false" class="text-muted-ink hover:text-ink transition-colors cursor-pointer" aria-label="Tutup">
+                     <x-lucide-x class="h-5 w-5" />
+                 </button>
+             </div>
+             
+             <!-- Modal Content -->
+             <div class="flex items-center justify-center bg-soft-green p-4">
+                 <img src="{{ $posterUrl }}" 
+                      alt="Poster lomba {{ $competition->title }}" 
+                      class="max-h-[550px] max-w-full object-contain rounded border border-border-line select-none">
+             </div>
+         </div>
+    </div>
+@endpush
+
 </div>
 @endsection

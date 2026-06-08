@@ -225,6 +225,7 @@
 </div>
 
 <style>[x-cloak]{display:none !important}</style>
+@stack('modals')
 @stack('scripts')
 </body>
 </html>
