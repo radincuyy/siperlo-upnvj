@@ -14,7 +14,8 @@ class EnrichCompetitions extends Command
 {
     protected $signature = 'siperlo:enrich
         {--limit=500 : Max number of detail pages to fetch}
-        {--dry-run : Preview without saving}';
+        {--dry-run : Preview without saving}
+        {--source=db : Source of URLs (db or web)}';
 
     protected $description = 'Enrich competitions by scraping detail pages from infolomba.id for category, description, links';
 
@@ -24,21 +25,46 @@ class EnrichCompetitions extends Command
     {
         $limit = (int) $this->option('limit');
         $dryRun = (bool) $this->option('dry-run');
+        $source = $this->option('source');
 
-        // Step 1: Collect detail page URLs using the existing scraper service
-        $this->info('📡 Collecting detail page URLs...');
+        $itemsToProcess = [];
 
-        $urlItems = $scraper->collectUrls($limit, function (int $collected, int $total) {
-            $this->output->write("\r  Collected: {$collected} / {$total}");
-        });
+        if ($source === 'db') {
+            $this->info('📡 Fetching competitions from database to enrich...');
+            $dbCompetitions = Competition::where('is_scraped', false)
+                ->whereNotNull('source_url')
+                ->limit($limit)
+                ->get();
+
+            $this->info('  Found ' . $dbCompetitions->count() . ' competitions needing enrichment');
+            foreach ($dbCompetitions as $comp) {
+                $itemsToProcess[] = [
+                    'url' => $comp->source_url,
+                    'model' => $comp,
+                ];
+            }
+        } else {
+            $this->info('📡 Collecting detail page URLs from infolomba.id...');
+            $urlItems = $scraper->collectUrls($limit, function (int $collected, int $total) {
+                $this->output->write("\r  Collected: {$collected} / {$total}");
+            });
+
+            $this->newLine();
+            $this->info('  Found ' . count($urlItems) . ' detail URLs');
+
+            foreach ($urlItems as $item) {
+                $itemsToProcess[] = [
+                    'url' => $item['url'],
+                    'model' => null,
+                ];
+            }
+        }
 
         $this->newLine();
-        $this->info('  Found ' . count($urlItems) . ' detail URLs');
-        $this->newLine();
 
-        if (empty($urlItems)) {
-            $this->error('No URLs found.');
-            return self::FAILURE;
+        if (empty($itemsToProcess)) {
+            $this->error('No competitions to enrich.');
+            return self::SUCCESS;
         }
 
         // Step 2: Process each detail page
@@ -46,14 +72,23 @@ class EnrichCompetitions extends Command
         $skipped = 0;
         $errors = 0;
 
-        $progressBar = $this->output->createProgressBar(count($urlItems));
+        $progressBar = $this->output->createProgressBar(count($itemsToProcess));
         $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% — %message%');
         $progressBar->setMessage('Starting...');
         $progressBar->start();
 
-        foreach ($urlItems as $item) {
+        foreach ($itemsToProcess as $item) {
             try {
-                $detail = $this->fetchDetailPage($item['url']);
+                $sourceUrl = $this->normalizeInfoLombaUrl($item['url']);
+
+                if ($sourceUrl === null) {
+                    $skipped++;
+                    $progressBar->setMessage('Skipped invalid source URL');
+                    $progressBar->advance();
+                    continue;
+                }
+
+                $detail = $this->fetchDetailPage($sourceUrl);
 
                 if (empty($detail) || empty($detail['title'])) {
                     $skipped++;
@@ -63,11 +98,14 @@ class EnrichCompetitions extends Command
                     continue;
                 }
 
-                // Match to DB by title (case-insensitive)
-                $competition = Competition::whereRaw(
-                    'LOWER(title) = ?',
-                    [mb_strtolower(trim($detail['title']))]
-                )->first();
+                $competition = $item['model'];
+                if (!$competition) {
+                    // Match to DB by title (case-insensitive)
+                    $competition = Competition::whereRaw(
+                        'LOWER(title) = ?',
+                        [mb_strtolower(trim($detail['title']))]
+                    )->first();
+                }
 
                 if (!$competition) {
                     $skipped++;
@@ -77,15 +115,19 @@ class EnrichCompetitions extends Command
                     continue;
                 }
 
-                // Build update data
+                // Build update data with truncations to prevent right truncation errors
                 $updateData = array_filter([
                     'category' => (!empty($detail['category']) && $detail['category'] !== '~Lainnya')
-                        ? $detail['category'] : null,
+                        ? mb_substr($detail['category'], 0, 255) : null,
                     'description' => $detail['description'] ?? null,
-                    'external_registration_url' => $detail['registration_url'] ?? null,
-                    'official_website' => $detail['guidebook_url'] ?? null,
-                    'social_media' => $detail['social_media'] ?? null,
-                    'source_url' => $item['url'],
+                    'external_registration_url' => isset($detail['registration_url'])
+                        ? mb_substr($detail['registration_url'], 0, 255) : null,
+                    'official_website' => isset($detail['guidebook_url'])
+                        ? mb_substr($detail['guidebook_url'], 0, 255) : null,
+                    'social_media' => isset($detail['social_media'])
+                        ? mb_substr($detail['social_media'], 0, 255) : null,
+                    'source_url' => mb_substr($sourceUrl, 0, 255),
+                    'is_scraped' => true,
                 ], fn ($v) => $v !== null && $v !== '');
 
                 if (!empty($updateData)) {
@@ -115,7 +157,7 @@ class EnrichCompetitions extends Command
         $this->table(
             ['Metric', 'Count'],
             [
-                ['Detail pages fetched', count($urlItems)],
+                ['Competitions processed', count($itemsToProcess)],
                 ['Enriched', $enriched],
                 ['Skipped', $skipped],
                 ['Errors', $errors],
@@ -151,7 +193,13 @@ class EnrichCompetitions extends Command
      */
     private function fetchDetailPage(string $url): array
     {
-        $response = Http::withoutVerifying()->timeout(30)->get($url);
+        $url = $this->normalizeInfoLombaUrl($url);
+
+        if ($url === null) {
+            return [];
+        }
+
+        $response = Http::timeout(30)->get($url);
 
         if ($response->failed()) {
             return [];
@@ -180,7 +228,7 @@ class EnrichCompetitions extends Command
             $catNode = $crawler->filter('.kategori-item');
             if ($catNode->count() > 0) {
                 $category = trim($catNode->first()->text(''));
-                $category = preg_replace('/\s+/', ' ', $category);
+                $category = preg_replace('/\s+/u', ' ', $category);
                 if ($category) {
                     $data['category'] = $category;
                 }
@@ -193,12 +241,15 @@ class EnrichCompetitions extends Command
             $descNode = $crawler->filter('.event-description-container');
             if ($descNode->count() > 0) {
                 $descHtml = $descNode->first()->html();
-                $text = preg_replace('/<br\s*\/?>/i', "\n", $descHtml);
-                $text = preg_replace('/<\/p>/i', "\n\n", $text);
+                // Clean invalid UTF-8 bytes first
+                $descHtml = mb_convert_encoding($descHtml, 'UTF-8', 'UTF-8');
+
+                $text = preg_replace('/<br\s*\/?>/iu', "\n", $descHtml) ?? $descHtml;
+                $text = preg_replace('/<\/p>/iu', "\n\n", $text) ?? $text;
                 $text = strip_tags($text);
                 $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
-                $text = preg_replace('/[ \t]+/', ' ', $text);
-                $text = preg_replace('/\n{3,}/', "\n\n", $text);
+                $text = preg_replace('/[ \t]+/u', ' ', $text) ?? $text;
+                $text = preg_replace('/\n{3,}/u', "\n\n", $text) ?? $text;
                 $text = trim($text);
                 if (mb_strlen($text) > 10) {
                     $data['description'] = $text;
@@ -213,8 +264,8 @@ class EnrichCompetitions extends Command
                 $text = mb_strtolower(trim($btn->text('')));
                 if (str_contains($text, 'daftar')) {
                     $href = $btn->attr('href') ?? '';
-                    if ($href && !str_contains($href, 'void') && $href !== '#') {
-                        $data['registration_url'] = $href;
+                    if ($url = $this->normalizeExternalUrl($href)) {
+                        $data['registration_url'] = $url;
                     }
                 }
             });
@@ -227,8 +278,8 @@ class EnrichCompetitions extends Command
                 $text = mb_strtolower(trim($btn->text('')));
                 if (str_contains($text, 'panduan')) {
                     $href = $btn->attr('href') ?? '';
-                    if ($href && !str_contains($href, 'void') && $href !== '#') {
-                        $data['guidebook_url'] = $href;
+                    if ($url = $this->normalizeExternalUrl($href)) {
+                        $data['guidebook_url'] = $url;
                     }
                 }
             });
@@ -253,5 +304,57 @@ class EnrichCompetitions extends Command
         }
 
         return $data;
+    }
+
+    /**
+     * Normalize and allowlist detail URLs fetched by this command.
+     */
+    private function normalizeInfoLombaUrl(string $url): ?string
+    {
+        $url = trim($url);
+
+        if ($url === '' || $url === '#') {
+            return null;
+        }
+
+        if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+            $url = self::BASE_URL . '/' . ltrim($url, '/');
+        }
+
+        $parts = parse_url($url);
+        $scheme = strtolower($parts['scheme'] ?? '');
+        $host = strtolower($parts['host'] ?? '');
+
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return null;
+        }
+
+        if (! in_array($host, ['infolomba.id', 'www.infolomba.id'], true)) {
+            return null;
+        }
+
+        return $url;
+    }
+
+    /**
+     * Keep only normal web links before saving scraped external URLs.
+     */
+    private function normalizeExternalUrl(string $url): ?string
+    {
+        $url = trim($url);
+
+        if ($url === '' || $url === '#' || str_contains(strtolower($url), 'void')) {
+            return null;
+        }
+
+        if (str_starts_with($url, '//')) {
+            $url = 'https:' . $url;
+        } elseif (str_starts_with($url, '/')) {
+            $url = self::BASE_URL . $url;
+        }
+
+        $scheme = strtolower(parse_url($url, PHP_URL_SCHEME) ?? '');
+
+        return in_array($scheme, ['http', 'https'], true) ? $url : null;
     }
 }

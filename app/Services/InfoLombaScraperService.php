@@ -92,7 +92,7 @@ class InfoLombaScraperService
         $urls = [];
 
         // First, scrape the initial page (offset 0 = already rendered in the page HTML)
-        $response = Http::withoutVerifying()->timeout(30)->get(self::BASE_URL);
+        $response = Http::timeout(30)->get(self::BASE_URL);
         if ($response->failed()) {
             throw new \RuntimeException('Failed to fetch infolomba.id homepage');
         }
@@ -108,7 +108,7 @@ class InfoLombaScraperService
         $offset = self::BATCH_SIZE;
 
         while (count($urls) < $totalNeeded) {
-            $response = Http::withoutVerifying()->timeout(30)
+            $response = Http::timeout(30)
                 ->asForm()
                 ->post(self::LOAD_EVENT_URL, ['start' => $offset]);
 
@@ -242,8 +242,7 @@ class InfoLombaScraperService
             $targetNode = $card->filter('.target');
             if ($targetNode->count() > 0) {
                 $targetText = trim($targetNode->text(''));
-                $targetText = preg_replace('/^\s*\S+\s*/', '', $targetText); // remove icon text
-                $data['type'] = $this->mapTargetToType(trim($targetText));
+                $data['type'] = $this->mapTargetToType($targetText);
             }
         } catch (\Exception) {
         }
@@ -262,9 +261,7 @@ class InfoLombaScraperService
         try {
             $locNode = $card->filter('.lokasi');
             if ($locNode->count() > 0) {
-                $locText = trim($locNode->text(''));
-                $locText = preg_replace('/^\s*\S+\s*/', '', $locText);
-                $data['location'] = trim($locText);
+                $data['location'] = trim($locNode->text(''));
             }
         } catch (\Exception) {
         }
@@ -274,8 +271,7 @@ class InfoLombaScraperService
             $dateNode = $card->filter('.tanggal');
             if ($dateNode->count() > 0) {
                 $dateText = trim($dateNode->text(''));
-                $dateText = preg_replace('/^\s*\S+\s*/', '', $dateText);
-                $dates = $this->parseDateRange(trim($dateText));
+                $dates = $this->parseDateRange($dateText);
                 $data['event_start'] = $dates['start'];
                 $data['event_end'] = $dates['end'];
                 $data['registration_deadline'] = $dates['end']; // Use end date as deadline
@@ -297,13 +293,23 @@ class InfoLombaScraperService
         } catch (\Exception) {
         }
 
-        // Source URL from onclick or href
+        // Source URL from href (more reliable) or onclick
         try {
-            $onclickNode = $card->filter('[onclick*="loadDetailsEvent"]');
-            if ($onclickNode->count() > 0) {
-                $onclick = $onclickNode->first()->attr('onclick') ?? '';
-                if (preg_match('/loadDetailsEvent\(\s*(\d+)\s*,\s*[\'"]([^"\']+)[\'"]/i', $onclick, $m)) {
-                    $data['source_url'] = self::BASE_URL . '/' . $m[2] . '-' . $m[1];
+            $linkNode = $card->filter('.event-title a');
+            if ($linkNode->count() > 0) {
+                $href = $linkNode->first()->attr('href') ?? '';
+                if ($href && $href !== '#') {
+                    $data['source_url'] = $this->normalizeInfoLombaUrl($href);
+                }
+            }
+
+            if (empty($data['source_url'])) {
+                $onclickNode = $card->filter('[onclick*="loadDetailsEvent"]');
+                if ($onclickNode->count() > 0) {
+                    $onclick = $onclickNode->first()->attr('onclick') ?? '';
+                    if (preg_match('/loadDetailsEvent\(\s*(\d+)\s*,\s*[\'"]([^"\']+)[\'"]/i', $onclick, $m)) {
+                        $data['source_url'] = $this->normalizeInfoLombaUrl($m[2] . '-' . $m[1]);
+                    }
                 }
             }
         } catch (\Exception) {
@@ -327,7 +333,7 @@ class InfoLombaScraperService
         $results = [];
 
         // Phase 1: Scrape initial page
-        $response = Http::withoutVerifying()->timeout(30)->get(self::BASE_URL);
+        $response = Http::timeout(30)->get(self::BASE_URL);
         if ($response->failed()) {
             throw new \RuntimeException('Failed to fetch infolomba.id homepage');
         }
@@ -344,7 +350,7 @@ class InfoLombaScraperService
 
         while (count($results) < $totalNeeded) {
             try {
-                $response = Http::withoutVerifying()->timeout(30)
+                $response = Http::timeout(30)
                     ->asForm()
                     ->post(self::LOAD_EVENT_URL, ['start' => $offset]);
             } catch (\Exception $e) {
@@ -408,6 +414,36 @@ class InfoLombaScraperService
 
             $results[] = $data;
         });
+    }
+
+    /**
+     * Normalize and allowlist detail URLs that the scraper may fetch later.
+     */
+    private function normalizeInfoLombaUrl(string $url): ?string
+    {
+        $url = trim($url);
+
+        if ($url === '' || $url === '#') {
+            return null;
+        }
+
+        if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+            $url = self::BASE_URL . '/' . ltrim($url, '/');
+        }
+
+        $parts = parse_url($url);
+        $scheme = strtolower($parts['scheme'] ?? '');
+        $host = strtolower($parts['host'] ?? '');
+
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return null;
+        }
+
+        if (! in_array($host, ['infolomba.id', 'www.infolomba.id'], true)) {
+            return null;
+        }
+
+        return $url;
     }
 
     /**

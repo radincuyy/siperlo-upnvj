@@ -7,7 +7,6 @@ namespace App\Console\Commands;
 use App\Models\Competition;
 use App\Services\InfoLombaScraperService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 class ScrapeInfoLomba extends Command
 {
@@ -101,10 +100,20 @@ class ScrapeInfoLomba extends Command
                 // Also check by title to avoid duplicates
                 $existingByTitle = Competition::where('title', $card['title'])->first();
                 if ($existingByTitle) {
-                    $skipped++;
-                    $progressBar->setMessage("Skipped (title match): {$card['title']}");
-                    $progressBar->advance();
-                    continue;
+                    if ($force) {
+                        if (!$dryRun) {
+                            $existingByTitle->update($this->prepareData($card));
+                        }
+                        $updated++;
+                        $progressBar->setMessage("Updated (title match): {$card['title']}");
+                        $progressBar->advance();
+                        continue;
+                    } else {
+                        $skipped++;
+                        $progressBar->setMessage("Skipped (title match): {$card['title']}");
+                        $progressBar->advance();
+                        continue;
+                    }
                 }
 
                 if (!$dryRun) {
@@ -171,23 +180,25 @@ class ScrapeInfoLomba extends Command
      */
     private function prepareData(array $card): array
     {
+        $truncate = fn(?string $val) => $val !== null ? mb_substr($val, 0, 255) : null;
+
         return [
-            'title' => $card['title'],
-            'organizer' => $card['organizer'] ?: 'Tidak diketahui',
-            'category' => $card['category'] ?? 'Lainnya',
-            'type' => $card['type'] ?? 'Nasional',
+            'title' => $truncate($card['title'] ?? ''),
+            'organizer' => $truncate($card['organizer'] ?: 'Tidak diketahui'),
+            'category' => $truncate($card['category'] ?? 'Lainnya'),
+            'type' => $truncate($card['type'] ?? 'Nasional'),
             'registration_deadline' => $card['registration_deadline'],
             'event_start' => $card['event_start'],
             'event_end' => $card['event_end'],
-            'location' => $card['location'],
+            'location' => $truncate($card['location'] ?? ''),
             'fee' => $card['fee'] ?? 0,
-            'poster_image' => $card['poster_image'],
+            'poster_image' => $truncate($card['poster_image'] ?? ''),
             'status' => $this->determineStatus($card),
-            'source_url' => $card['source_url'],
-            'description' => $card['description'],
-            'contact_person_phone' => $card['contact_person_phone'],
-            'external_registration_url' => $card['external_registration_url'],
-            'official_website' => $card['official_website'],
+            'source_url' => $truncate($card['source_url'] ?? ''),
+            'description' => $card['description'] ?? null,
+            'contact_person_phone' => $truncate($card['contact_person_phone'] ?? ''),
+            'external_registration_url' => $truncate($card['external_registration_url'] ?? ''),
+            'official_website' => $truncate($card['official_website'] ?? ''),
         ];
     }
 
